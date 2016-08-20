@@ -28,8 +28,9 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
 
     private FloatingActionButton quickFAB;
 
-    private Item[] songItems;
+    private Toolbar myToolbar;
 
+    private Item[] songItems;
 
     private static MediaPlayer mediaPlayer;
 
@@ -55,7 +56,7 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Toolbar myToolbar = (Toolbar) findViewById(R.id.toolbar);
+        myToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(myToolbar);
 
         MusicRetriever musicRetriever = new MusicRetriever(this.getContentResolver());
@@ -89,6 +90,7 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
         tabLayout = (TabLayout) findViewById(R.id.music_list_tab_layout);
 
 
+
         if(ContextCompat.checkSelfPermission(getApplicationContext(),
                 Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
             ActivityCompat.requestPermissions(this, new String[]{
@@ -96,9 +98,6 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
         } else {
             prepareListFragment();
         }
-
-
-
     }
 
     private void prepareListFragment(){
@@ -115,18 +114,16 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
                 add(R.id.fragment_container, musicListFragment).commit();
     }
 
-
-
     public void onSongSelect(int songItemIndex) {
-        Uri songURI = songItems[songItemIndex].getURI();
-
         mediaPlayer.stop();
         mediaPlayer.reset();
 
         try {
-            mediaPlayer.setDataSource(getApplicationContext(), songURI);
+            mediaPlayer.setDataSource(getApplicationContext(), songItems[songItemIndex].getURI());
             mediaPlayer.prepare();
             startPlayback();
+            myToolbar.setTitle(songItems[songItemIndex].getTitle());
+            myToolbar.setSubtitle(songItems[songItemIndex].getArtist());
         } catch (IOException ioe){
             Toast.makeText(MainActivity.this, ioe.getMessage(), Toast.LENGTH_SHORT).show();
         }
@@ -136,9 +133,7 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
     @Override
     public void OnListItemPicked(int index) {
         onSongSelect(index);
-        Toast.makeText(MainActivity.this, songItems[index].getTitle(), Toast.LENGTH_SHORT).show();
     }
-
 
     private void startPlayback(){
         mediaPlayer.start();
