@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">BoomBox</string>
+    <string name="tab_item_artists">Artists</string>
+    <string name="tab_item_albums">Albums</string>
+    <string name="tab_item_playlists">Playlists</string>
+    <string name="tab_item_songs">Songs</string>
+    <string name="title_activity_main">MainActivity</string>
+</resources>
