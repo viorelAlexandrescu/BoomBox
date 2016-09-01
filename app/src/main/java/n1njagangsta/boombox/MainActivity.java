@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
 
     private Toolbar myToolbar;
 
-    private Item[] songItems;
+    private Song[] songs;
 
     private static MediaPlayer mediaPlayer;
 
@@ -41,7 +41,7 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
                 if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
                     musicRetriever = new MusicRetriever(this.getContentResolver());
                     musicRetriever.prepare();
-                    songItems = musicRetriever.getSongsAsItems();
+                    songs = musicRetriever.getSongsAsItems();
 
                     mediaPlayer = new MediaPlayer();
 
@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
 
             musicRetriever = new MusicRetriever(this.getContentResolver());
             musicRetriever.prepare();
-            songItems = musicRetriever.getSongsAsItems();
+            songs = musicRetriever.getSongsAsItems();
 
             mediaPlayer = new MediaPlayer();
 
@@ -77,6 +77,9 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
     private void prepareListFragment(){
         Bundle songsData = new Bundle();
         songsData.putStringArray("songList", musicRetriever.getSongsAsStringArray());
+        songsData.putStringArray("artistList", new String[]{"Artists"});
+        songsData.putStringArray("albumList", new String[]{"Albums"});
+        songsData.putInt("currentTabPosition", tabLayout.getSelectedTabPosition());
 
         musicListFragment = new MusicListFragment();
         musicListFragment.setArguments(songsData);
@@ -144,15 +147,14 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
         mediaPlayer.reset();
 
         try {
-            mediaPlayer.setDataSource(getApplicationContext(), songItems[songItemIndex].getURI());
+            mediaPlayer.setDataSource(getApplicationContext(), songs[songItemIndex].getURI());
             mediaPlayer.prepare();
             startPlayback();
-            myToolbar.setTitle(songItems[songItemIndex].getTitle());
-            myToolbar.setSubtitle(songItems[songItemIndex].getArtist());
+            myToolbar.setTitle(songs[songItemIndex].getTitle());
+            myToolbar.setSubtitle(songs[songItemIndex].getArtist());
         } catch (IOException ioe){
             Toast.makeText(MainActivity.this, ioe.getMessage(), Toast.LENGTH_SHORT).show();
         }
-
     }
 
     @Override

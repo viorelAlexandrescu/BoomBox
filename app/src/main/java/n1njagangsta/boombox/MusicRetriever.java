@@ -13,7 +13,8 @@ import java.util.List;
  */
 public class MusicRetriever {
     private ContentResolver contentResolver;
-    private List<Item> allSongs;
+    private List<Song> allSongs;
+    private String[] artists, albums;
 
     public MusicRetriever(ContentResolver newContentResolver) {
         contentResolver = newContentResolver;
@@ -44,7 +45,7 @@ public class MusicRetriever {
                 idColumn = cursor.getColumnIndex(MediaStore.Audio.Media._ID);
 
         do{
-            allSongs.add(new Item(
+            allSongs.add(new Song(
                     cursor.getLong(idColumn),
                     cursor.getString(artistColumn),
                     cursor.getString(titleColumn),
@@ -62,8 +63,8 @@ public class MusicRetriever {
         return contentResolver;
     }
 
-    public Item[] getSongsAsItems(){
-       return allSongs.toArray(new Item[allSongs.size()]);
+    public Song[] getSongsAsItems(){
+       return allSongs.toArray(new Song[allSongs.size()]);
     }
 
     public String[] getSongsAsStringArray(){

@@ -6,4 +6,23 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <style name="ListViewTheme_Light" parent="@android:style/Widget.ListView">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingStart">4dp</item>
+        <item name="android:paddingEnd">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:divider">@android:color/transparent</item>
+        <item name="android:background">@android:color/white</item>
+        <item name="android:listSelector">@color/listview_item_selector</item>
+        <item name="android:drawSelectorOnTop">false</item>
+    </style>
+
+    <style name="CustomListView_Item_Style">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:textColor">@android:color/black</item>
+    </style>
+
 </resources>

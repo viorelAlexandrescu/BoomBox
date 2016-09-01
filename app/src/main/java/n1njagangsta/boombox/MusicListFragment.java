@@ -42,16 +42,38 @@ public class MusicListFragment extends Fragment implements AdapterView.OnItemCli
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        String[] values = getArguments().getStringArray("songList");
-        ArrayList<String> items = new ArrayList<>();
+        String[] songs = getArguments().getStringArray("songList"),
+                 artists = getArguments().getStringArray("artistList"),
+                 albums = getArguments().getStringArray("albumList");
 
-        if(values != null){
-           items.addAll(Arrays.asList(values));
-        } else {
-            Toast.makeText(getActivity().getApplicationContext(), "Song list empty on list initialization", Toast.LENGTH_LONG).show();
+        int currentTabPosition = getArguments().getInt("currentTabPostion");
+
+        ArrayList<String> items = new ArrayList<>();
+        switch (currentTabPosition){
+            case 0:
+                if(artists != null){
+                    items.addAll(Arrays.asList(artists));
+                } else {
+                    Toast.makeText(getContext(), "Artist list empty on list initialization", Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case 1:
+                if(albums != null){
+                    items.addAll(Arrays.asList(albums));
+                }else {
+                    Toast.makeText(getContext(), "Album list empty on list initilizaation", Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case 2:
+                if(songs != null){
+                    items.addAll(Arrays.asList(songs));
+                } else {
+                    Toast.makeText(getContext(), "Song list empty on list initialization", Toast.LENGTH_LONG).show();
+                }
+                break;
         }
 
-        stringArrayAdapter = new ArrayAdapter<String>(getActivity().getApplicationContext(), R.layout.support_simple_spinner_dropdown_item, items);
+        stringArrayAdapter = new ArrayAdapter<String>(getContext(), R.layout.simple_listview_item, items);
         stringArrayAdapter.setNotifyOnChange(true);
     }
 
