@@ -11,6 +11,8 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
@@ -65,6 +67,7 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
 
             musicRetriever = new MusicRetriever(this.getContentResolver());
             musicRetriever.prepare();
+
             songs = musicRetriever.getSongsAsItems();
 
             mediaPlayer = new MediaPlayer();
@@ -90,8 +93,7 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
 
     private void prepareUI(){
         myToolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(myToolbar);
-
+        tabLayout = (TabLayout) findViewById(R.id.music_list_tab_layout);
         quickFAB = (FloatingActionButton) findViewById(R.id.quickPlayFAB);
 
         quickFAB.setOnClickListener(new View.OnClickListener() {
@@ -106,7 +108,6 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
             }
         });
 
-        tabLayout = (TabLayout) findViewById(R.id.music_list_tab_layout);
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
@@ -140,6 +141,8 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
                 */
             }
         });
+
+        setSupportActionBar(myToolbar);
     }
 
     public void onSongSelect(int songItemIndex) {
@@ -154,6 +157,26 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
             myToolbar.setSubtitle(songs[songItemIndex].getArtist());
         } catch (IOException ioe){
             Toast.makeText(MainActivity.this, ioe.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_music_player,menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()){
+            case R.id.action_settings:
+                Toast.makeText(MainActivity.this, "Settings Button", Toast.LENGTH_SHORT).show();
+                return true;
+            case R.id.return_to_list_menu_btn:
+                Toast.makeText(MainActivity.this, "Return To Music List", Toast.LENGTH_SHORT).show();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
         }
     }
 
