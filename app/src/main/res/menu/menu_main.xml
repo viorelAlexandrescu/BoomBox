@@ -9,13 +9,12 @@
         android:id="@+id/return_to_list_menu_btn"
         android:icon="@drawable/ic_list_white_48dp"
         android:title="@string/action_return_to_music_list"
-        app:showAsAction="ifRoom"/>
+        app:showAsAction="always"/>
 
     <item
-        android:id="@+id/action_settings"
-        android:title="@string/action_settings"
-        android:actionLayout="@layout/simple_listview_item"
-        app:showAsAction="collapseActionView"
-        />
+        android:id="@+id/open_music_player_btn"
+        android:icon="@drawable/ic_radio_white_48dp"
+        android:title="@string/action_open_music_player"
+        app:showAsAction="ifRoom" />
 
 </menu>

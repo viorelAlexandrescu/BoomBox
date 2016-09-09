@@ -9,13 +9,13 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
-
 import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity implements MusicListFragment.OnItemSelectedListener{
@@ -37,7 +37,8 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
     private boolean isPlayButtonClicked = false;
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
         switch (requestCode){
             case PackageManager.PERMISSION_GRANTED:{
                 if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
@@ -51,9 +52,9 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
                     prepareListFragment();
                 }
             }
+            // do not start app if you cannot access local data
         }
     }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -101,6 +102,7 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
             public void onClick(View view) {
                 if(isPlayButtonClicked){
                     startPlayback();
+
                 } else {
                     pausePlayback();
                 }
@@ -162,22 +164,39 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_music_player,menu);
+        getMenuInflater().inflate(R.menu.menu_main,menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()){
-            case R.id.action_settings:
-                Toast.makeText(MainActivity.this, "Settings Button", Toast.LENGTH_SHORT).show();
-                return true;
             case R.id.return_to_list_menu_btn:
-                Toast.makeText(MainActivity.this, "Return To Music List", Toast.LENGTH_SHORT).show();
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
+                if(musicListFragment.isVisible()){
+                    break;
+                }
+                quickFAB.show();
+                tabLayout.setVisibility(View.VISIBLE);
+
+                Bundle bundleData = new Bundle();
+                bundleData.putStringArray("songList", musicRetriever.getSongsAsStringArray());
+                bundleData.putStringArray("artistList", new String[]{"Artists"});
+                bundleData.putStringArray("albumList", new String[]{"Albums"});
+                bundleData.putInt("currentTabPosition", tabLayout.getSelectedTabPosition());
+                musicListFragment.setArguments(bundleData);
+
+                getFragmentManager().beginTransaction().
+                        replace(R.id.fragment_container, musicListFragment).commit();
+                break;
+            case R.id.open_music_player_btn:
+                quickFAB.hide();
+                tabLayout.setVisibility(View.GONE);
+                getFragmentManager().beginTransaction().
+                        replace(R.id.fragment_container, new MusicPlayerFragment()).commit();
+                break;
+
         }
+        return true;
     }
 
     @Override

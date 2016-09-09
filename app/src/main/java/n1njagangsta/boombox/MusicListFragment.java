@@ -42,11 +42,12 @@ public class MusicListFragment extends Fragment implements AdapterView.OnItemCli
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         String[] songs = getArguments().getStringArray("songList"),
                  artists = getArguments().getStringArray("artistList"),
                  albums = getArguments().getStringArray("albumList");
 
-        int currentTabPosition = getArguments().getInt("currentTabPostion");
+        int currentTabPosition = getArguments().getInt("currentTabPosition");
 
         ArrayList<String> items = new ArrayList<>();
         switch (currentTabPosition){
