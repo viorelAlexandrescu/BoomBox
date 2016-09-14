@@ -21,7 +21,7 @@ import java.util.Arrays;
 public class MusicListFragment extends Fragment implements AdapterView.OnItemClickListener{
     private ListView elementsList;
     private ArrayAdapter<String> stringArrayAdapter;
-    OnItemSelectedListener mCallback;
+    private OnItemSelectedListener mCallback;
 
     public MusicListFragment(){
     }
@@ -34,9 +34,9 @@ public class MusicListFragment extends Fragment implements AdapterView.OnItemCli
         try{
             mCallback = (OnItemSelectedListener) activity;
         } catch (ClassCastException cce){
-            throw new ClassCastException(activity.toString() + " must implement OnItemSelectedListener");
+            throw new ClassCastException(activity.toString() +
+                    " must implement OnItemSelectedListener");
         }
-
     }
 
     @Override

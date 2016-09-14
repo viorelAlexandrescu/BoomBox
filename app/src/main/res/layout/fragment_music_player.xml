@@ -24,7 +24,7 @@
                     android:id="@+id/playback_seekBar"
                     android:layout_width="match_parent"
                     android:layout_height="32dp"
-                    android:background="@android:color/darker_gray"/>
+                    android:background="@android:color/darker_gray" />
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -32,25 +32,28 @@
                     android:layout_centerInParent="true"
                     android:layout_below="@id/playback_seekBar">
 
-                <ImageView
+                <ImageButton
                     android:id="@+id/skip_to_previous_btn"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:padding="25dp"
+                    android:background="@android:color/transparent"
                     android:src="@drawable/ic_skip_previous_white_24dp"/>
 
-                <ImageView
+                <ImageButton
                     android:id="@+id/play_pause_btn"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:padding="25dp"
+                    android:background="@android:color/transparent"
                     android:src="@drawable/ic_play_arrow_white_24dp"/>
 
-                <ImageView
+                <ImageButton
                     android:id="@+id/skip_to_next_btn"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:padding="25dp"
+                    android:background="@android:color/transparent"
                     android:src="@drawable/ic_skip_next_white_24dp"/>
 
                 </LinearLayout>

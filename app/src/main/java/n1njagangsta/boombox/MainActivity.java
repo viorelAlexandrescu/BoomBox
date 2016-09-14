@@ -18,11 +18,14 @@ import android.view.View;
 import android.widget.Toast;
 import java.io.IOException;
 
-public class MainActivity extends AppCompatActivity implements MusicListFragment.OnItemSelectedListener{
+public class MainActivity extends AppCompatActivity
+        implements MusicListFragment.OnItemSelectedListener, MusicPlayerFragment.OnPlayerInteractionListener{
 
     private TabLayout tabLayout;
 
     private MusicListFragment musicListFragment;
+
+    private MusicPlayerFragment musicPlayerFragment;
 
     private MusicRetriever musicRetriever;
 
@@ -75,6 +78,8 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
 
             prepareUI();
             prepareListFragment();
+
+            musicPlayerFragment = new MusicPlayerFragment();
         }
     }
 
@@ -188,11 +193,20 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
                 getFragmentManager().beginTransaction().
                         replace(R.id.fragment_container, musicListFragment).commit();
                 break;
+
             case R.id.open_music_player_btn:
+                if(musicPlayerFragment.isVisible()){
+                    break;
+                }
+                Bundle bundle = new Bundle();
+                bundle.putBoolean("mediaPlayerStatus",mediaPlayer.isPlaying());
+
                 quickFAB.hide();
                 tabLayout.setVisibility(View.GONE);
+
+                musicPlayerFragment.setArguments(bundle);
                 getFragmentManager().beginTransaction().
-                        replace(R.id.fragment_container, new MusicPlayerFragment()).commit();
+                        replace(R.id.fragment_container, musicPlayerFragment).commit();
                 break;
 
         }
@@ -224,5 +238,16 @@ public class MainActivity extends AppCompatActivity implements MusicListFragment
     private void pausePlayback(){
         mediaPlayer.pause();
         quickFAB.setImageResource(R.drawable.ic_play_arrow_white_24dp);
+    }
+
+    @Override
+    public void onPlaybackClick() {
+        if(mediaPlayer.isPlaying()){
+            pausePlayback();
+            musicPlayerFragment.changePlaybackButtonImage(mediaPlayer.isPlaying());
+        } else {
+            startPlayback();
+            musicPlayerFragment.changePlaybackButtonImage(mediaPlayer.isPlaying());
+        }
     }
 }
