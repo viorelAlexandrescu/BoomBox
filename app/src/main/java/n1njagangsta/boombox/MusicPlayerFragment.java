@@ -48,9 +48,9 @@ public class MusicPlayerFragment extends Fragment implements View.OnClickListene
         View rootView = inflater.inflate(R.layout.fragment_music_player, container, false);
         playbackButton = (ImageButton) rootView.findViewById(R.id.play_pause_btn);
         if(isMusicPlaying){
-            playbackButton.setImageResource(R.drawable.ic_pause_white_24dp);
+            playbackButton.setImageResource(R.drawable.ic_pause_white_48dp);
         } else {
-            playbackButton.setImageResource(R.drawable.ic_play_arrow_white_24dp);
+            playbackButton.setImageResource(R.drawable.ic_play_arrow_white_48dp);
         }
 
         playbackButton.setOnClickListener(this);
@@ -70,9 +70,9 @@ public class MusicPlayerFragment extends Fragment implements View.OnClickListene
 
     public void changePlaybackButtonImage(boolean mediaPlayerIsPlaying){
         if(mediaPlayerIsPlaying){
-            playbackButton.setImageResource(R.drawable.ic_pause_white_24dp);
+            playbackButton.setImageResource(R.drawable.ic_pause_white_48dp);
         } else {
-            playbackButton.setImageResource(R.drawable.ic_play_arrow_white_24dp);
+            playbackButton.setImageResource(R.drawable.ic_play_arrow_white_48dp);
         }
     }
 

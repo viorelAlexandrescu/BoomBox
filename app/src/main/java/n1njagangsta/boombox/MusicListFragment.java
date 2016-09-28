@@ -62,7 +62,7 @@ public class MusicListFragment extends Fragment implements AdapterView.OnItemCli
                 if(albums != null){
                     items.addAll(Arrays.asList(albums));
                 }else {
-                    Toast.makeText(getContext(), "Album list empty on list initilizaation", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "Album list empty on list initialization", Toast.LENGTH_SHORT).show();
                 }
                 break;
             case 2:

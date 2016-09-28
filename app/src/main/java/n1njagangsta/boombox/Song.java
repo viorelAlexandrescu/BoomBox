@@ -5,6 +5,8 @@ import android.net.Uri;
 
 /**
  * Created by viorel on 16.08.2016.
+ *
+ * This class describes a Song :)
  */
 public class Song {
     private long id, duration;

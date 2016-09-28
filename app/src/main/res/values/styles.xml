@@ -15,6 +15,7 @@
         <item name="android:background">@android:color/white</item>
         <item name="android:listSelector">@color/listview_item_selector</item>
         <item name="android:drawSelectorOnTop">false</item>
+        <item name="android:animateLayoutChanges">true</item>
     </style>
 
     <style name="CustomListView_Item_Style">
@@ -28,6 +29,8 @@
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">?attr/actionBarSize</item>
         <item name="android:background">@color/colorPrimary</item>
+        <!--<item name="android:animateLayoutChanges">true</item>-->
+        <!--TODO ^ Find a way to remove blank space (icon placeholder?)-->
     </style>
 
 </resources>

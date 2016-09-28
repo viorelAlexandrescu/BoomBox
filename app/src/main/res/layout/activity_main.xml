@@ -43,12 +43,12 @@
 
     </android.support.design.widget.AppBarLayout>
 
-
     <FrameLayout
         android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@+id/appBarLayout" />
+        android:layout_below="@+id/appBarLayout"
+        android:animateLayoutChanges="true" />
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/quickPlayFAB"
@@ -58,6 +58,6 @@
         android:layout_alignParentEnd="true"
         android:layout_margin="@dimen/fab_margin"
         app:fabSize="normal"
-        android:src="@drawable/ic_play_arrow_white_24dp"/>
+        android:src="@drawable/ic_play_arrow_white_48dp" />
 
 </RelativeLayout>

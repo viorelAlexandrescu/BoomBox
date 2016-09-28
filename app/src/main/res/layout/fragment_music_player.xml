@@ -30,7 +30,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_centerInParent="true"
-                    android:layout_below="@id/playback_seekBar">
+                    android:layout_below="@id/playback_seekBar" >
 
                 <ImageButton
                     android:id="@+id/skip_to_previous_btn"
@@ -38,7 +38,7 @@
                     android:layout_height="match_parent"
                     android:padding="25dp"
                     android:background="@android:color/transparent"
-                    android:src="@drawable/ic_skip_previous_white_24dp"/>
+                    android:src="@drawable/ic_skip_previous_white_48dp"/>
 
                 <ImageButton
                     android:id="@+id/play_pause_btn"
@@ -46,7 +46,8 @@
                     android:layout_height="match_parent"
                     android:padding="25dp"
                     android:background="@android:color/transparent"
-                    android:src="@drawable/ic_play_arrow_white_24dp"/>
+                    android:src="@drawable/ic_play_arrow_white_48dp"
+                    />
 
                 <ImageButton
                     android:id="@+id/skip_to_next_btn"
@@ -54,7 +55,7 @@
                     android:layout_height="match_parent"
                     android:padding="25dp"
                     android:background="@android:color/transparent"
-                    android:src="@drawable/ic_skip_next_white_24dp"/>
+                    android:src="@drawable/ic_skip_next_white_48dp"/>
 
                 </LinearLayout>
         </RelativeLayout>
