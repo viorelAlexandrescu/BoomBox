@@ -16,6 +16,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 import java.io.IOException;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity
         implements MusicListFragment.OnItemSelectedListener, MusicPlayerFragment.OnPlayerInteractionListener{
@@ -87,10 +88,31 @@ public class MainActivity extends AppCompatActivity
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()){
             case android.R.id.home:
-                getSupportActionBar().setDisplayHomeAsUpEnabled(false);
-
-                musicListFragment.changeContents(musicRetriever.getAlbumsAsStringArray());
                 // here change Title + Subtitle Font size back to normal
+                switch (tabLayout.getSelectedTabPosition()){
+                    case 0:
+                        switch (musicRetriever.getArtistStackSize()){
+                            case 2:
+                                musicRetriever.popAlbumListFromArtistStack();
+                                musicListFragment.changeContents(
+                                        musicRetriever.getArtistsAsStringArray());
+                                showBackButton(false);
+                                break;
+                            case 3:
+                                musicRetriever.popSongListFromArtistStack();
+                                musicListFragment.changeContents(
+                                        musicRetriever.getAlbumListAsStringArray(
+                                                musicRetriever.getSelectedArtistAlbum()));
+                                break;
+                        }
+                        break;
+                    case 1:
+                        musicRetriever.popSongListFromAlbumStack();
+                        musicListFragment.changeContents(
+                                musicRetriever.getAlbumsAsStringArray());
+                        showBackButton(false );
+                        break;
+                }
                 break;
 
             case R.id.return_to_list_menu_btn:
@@ -100,14 +122,43 @@ public class MainActivity extends AppCompatActivity
                 quickFAB.show();
                 tabLayout.setVisibility(View.VISIBLE);
 
+                String artistsKey = "artistList",
+                        albumsKey = "albumList",
+                        songsKey = "songList";
+
                 Bundle bundleData = new Bundle();
-                bundleData.putStringArray("songList", musicRetriever.getSongsAsStringArray());
-                bundleData.putStringArray("artistList", new String[]{"Artists"});
-                if(musicRetriever.isViewingTempList()){
-                    bundleData.putStringArray("albumList", musicRetriever.getTempSongListAsArray());
-                } else {
-                    bundleData.putStringArray("albumList", musicRetriever.getAlbumsAsStringArray());
+                bundleData.putStringArray(songsKey, musicRetriever.getSongsAsStringArray());
+
+                switch (musicRetriever.getArtistStackSize()){
+                    case 1:
+                        bundleData.putStringArray(artistsKey, musicRetriever.getArtistsAsStringArray());
+                        break;
+                    case 2:
+                        bundleData.putStringArray(artistsKey,
+                                musicRetriever.getAlbumListAsStringArray(
+                                        musicRetriever.getSelectedArtistAlbum()));
+                        showBackButton(true);
+                        break;
+                    case 3:
+                        bundleData.putStringArray(artistsKey,
+                                musicRetriever.getSongListFromAlbumAsStringArray(
+                                        musicRetriever.getSongListOfSelectedAlbumOfSelectedArtist()));
+                        showBackButton(true);
+                        break;
                 }
+
+                switch (musicRetriever.getAlbumStackSize()){
+                    case 1:
+                        bundleData.putStringArray(albumsKey, musicRetriever.getAlbumsAsStringArray());
+                        break;
+                    case 2:
+                        bundleData.putStringArray(albumsKey,
+                               musicRetriever.getSongListFromAlbumAsStringArray(
+                                       musicRetriever.getSongListOfSelectedAlbumOfAlbumList()));
+                        showBackButton(true);
+                        break;
+                }
+
 
                 bundleData.putInt("currentTabPosition", tabLayout.getSelectedTabPosition());
                 musicListFragment.setArguments(bundleData);
@@ -126,11 +177,12 @@ public class MainActivity extends AppCompatActivity
                 quickFAB.hide();
                 tabLayout.setVisibility(View.GONE);
 
+                showBackButton(false);
+
                 musicPlayerFragment.setArguments(bundle);
                 getFragmentManager().beginTransaction().
                         replace(R.id.fragment_container, musicPlayerFragment).commit();
                 break;
-
         }
         return true;
     }
@@ -139,15 +191,16 @@ public class MainActivity extends AppCompatActivity
     public void OnListItemPicked(int index) {
         switch (tabLayout.getSelectedTabPosition()){
             case 0:
-                //artists tab
-                Toast.makeText(MainActivity.this, "Artists", Toast.LENGTH_SHORT).show();
+                //  artists tab
+                onArtistSelect(index);
                 break;
             case 1:
-                //albums tab
+                //  albums tab
                 onAlbumsSelect(index);
                 break;
             case 2:
-                onSongSelect(index);
+                // songs tab
+                onSongSelect(musicRetriever.getSongs(),index);
         }
     }
 
@@ -175,7 +228,7 @@ public class MainActivity extends AppCompatActivity
     private void prepareListFragment(){
         Bundle songsData = new Bundle();
         songsData.putStringArray("songList", musicRetriever.getSongsAsStringArray());
-        songsData.putStringArray("artistList", new String[]{"Artists"});
+        songsData.putStringArray("artistList", musicRetriever.getArtistsAsStringArray());
         songsData.putStringArray("albumList", musicRetriever.getAlbumsAsStringArray());
         songsData.putInt("currentTabPosition", tabLayout.getSelectedTabPosition());
 
@@ -209,88 +262,133 @@ public class MainActivity extends AppCompatActivity
             public void onTabSelected(TabLayout.Tab tab) {
                 switch (tab.getPosition()){
                     case 0:
-                        musicListFragment.changeContents(new String[]{"Artists"});
+                        switch (musicRetriever.getArtistStackSize()){
+                            case 1:
+                                musicListFragment.changeContents(musicRetriever.getArtistsAsStringArray());
+                                showBackButton(false);
+                                break;
+                            case 2:
+                                musicListFragment.changeContents(
+                                        musicRetriever.getAlbumListAsStringArray(
+                                                musicRetriever.getSelectedArtistAlbum()));
+                                showBackButton(true);
+                                break;
+                            case 3:
+                                musicListFragment.changeContents(
+                                        musicRetriever.getSongListFromAlbumAsStringArray(
+                                                musicRetriever.getSongListOfSelectedAlbumOfSelectedArtist()));
+                                showBackButton(true);
+                                break;
+                        }
                         break;
                     case 1:
-                        if(musicRetriever.isViewingTempList()){
-                            musicListFragment.changeContents(musicRetriever.getTempSongListAsArray());
-                            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-                        }else {
-                            getSupportActionBar().setDisplayHomeAsUpEnabled(false);
-                            musicListFragment.changeContents(musicRetriever.getAlbumsAsStringArray());
+                        switch (musicRetriever.getAlbumStackSize()){
+                            case 1:
+                                musicListFragment.changeContents(
+                                        musicRetriever.getAlbumsAsStringArray());
+                                showBackButton(false);
+                                break;
+                            case 2:
+                                musicListFragment.changeContents(
+                                        musicRetriever.getSongListFromAlbumAsStringArray(
+                                                musicRetriever.getSongListOfSelectedAlbumOfAlbumList()));
+                                showBackButton(true);
+                                break;
                         }
-
                         break;
                     case 2:
-                        getSupportActionBar().setDisplayHomeAsUpEnabled(false);
                         musicListFragment.changeContents(musicRetriever.getSongsAsStringArray());
+                        showBackButton(false);
                         break;
                 }
             }
 
             @Override
             public void onTabUnselected(TabLayout.Tab tab) {
-                /* when any of the Artists or Albums tab is unselected,
-                    they add to their own stack what the user was viewing last time
-
-                    REMEMBER WHEN SCROLLING THE ARTISTS OR ALBUMS TABS DO ADD A BACK BUTTON IN THE TOOLBAR
-                 */
             }
 
             @Override
             public void onTabReselected(TabLayout.Tab tab) {
-                /* for the Artists and Albums tabs, we'll make a stack for each of them
-                    and when the user scrolls through the data, when he comes back, he'll the
-                    last thing he viewed
-                */
             }
         });
 
         setSupportActionBar(myToolbar);
     }
 
+    private void onArtistSelect(int artistItemIndex){
+        switch (musicRetriever.getArtistStackSize()){
+            case 1:
+                musicRetriever.pushAlbumListToArtistStack(
+                        musicRetriever.getArtists().get(artistItemIndex).getAlbumList());
+
+                musicListFragment.changeContents(
+                        musicRetriever.getAlbumListAsStringArray(
+                                musicRetriever.getSelectedArtistAlbum()));
+                showBackButton(true);
+                break;
+            case 2:
+                try{
+                    musicRetriever.pushSongListToArtistStack(
+                            musicRetriever.getSongsByAlbumId(
+                                    musicRetriever.getSelectedArtistAlbum().get(artistItemIndex).getAlbumId()));
+                    musicListFragment.changeContents(
+                            musicRetriever.getSongListFromAlbumAsStringArray(
+                                    musicRetriever.getSongListOfSelectedAlbumOfSelectedArtist()));
+                } catch (Exception e){
+                    Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case 3:
+                onSongSelect(musicRetriever.getSongListOfSelectedAlbumOfSelectedArtist(),
+                        artistItemIndex);
+                break;
+        }
+    }
+
     private void onAlbumsSelect(int albumItemIndex){
-        if(musicRetriever.isViewingTempList()){
-            onSongFromAlbumSelect(albumItemIndex);
-        } else {
-            String songs[] = musicRetriever.getSongsByAlbumId(
-                    musicRetriever.getAlbums().get(albumItemIndex).getAlbumId());
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
-            // here change Title + Subtitle Font size back a smaller size if needed
-            musicListFragment.changeContents(songs);
+        switch (musicRetriever.getAlbumStackSize()){
+            case 1:
+                try {
+                    musicRetriever.pushSongListToAlbumStack(
+                            musicRetriever.getSongsByAlbumId(
+                                    musicRetriever.getAlbums().get(albumItemIndex).getAlbumId()));
+                    musicListFragment.changeContents(
+                            musicRetriever.getSongListFromAlbumAsStringArray(
+                                    musicRetriever.getSongListOfSelectedAlbumOfAlbumList()));
+                    showBackButton(true);
+                } catch (Exception e){
+                    Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case 2:
+                onSongSelect(musicRetriever.getSongListOfSelectedAlbumOfAlbumList(),albumItemIndex);
+                break;
         }
     }
 
-    private void onSongSelect(int songItemIndex) {
+    private void onSongSelect(List<Song> songs, int songItemIndex) {
         mediaPlayer.stop();
         mediaPlayer.reset();
 
         try {
             mediaPlayer.setDataSource(getApplicationContext(),
-                    musicRetriever.getSongs().get(songItemIndex).getURI());
+                    songs.get(songItemIndex).getURI());
             mediaPlayer.prepare();
             startPlayback();
-            myToolbar.setTitle(musicRetriever.getSongs().get(songItemIndex).getTitle());
-            myToolbar.setSubtitle(musicRetriever.getSongs().get(songItemIndex).getArtist());
+            myToolbar.setTitle(songs.get(songItemIndex).getTitle());
+            myToolbar.setSubtitle(songs.get(songItemIndex).getArtist());
         } catch (IOException ioe){
             Toast.makeText(MainActivity.this, ioe.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void onSongFromAlbumSelect(int songItemIndex){
-        mediaPlayer.stop();
-        mediaPlayer.reset();
-
-        try {
-            mediaPlayer.setDataSource(getApplicationContext(),
-                    musicRetriever.getTempSongList().get(songItemIndex).getURI());
-            mediaPlayer.prepare();
-            startPlayback();
-            myToolbar.setTitle(musicRetriever.getTempSongList().get(songItemIndex).getTitle());
-            myToolbar.setSubtitle(musicRetriever.getTempSongList().get(songItemIndex).getArtist());
-        } catch (IOException ioe){
-            Toast.makeText(MainActivity.this, ioe.getMessage(), Toast.LENGTH_SHORT).show();
+    private void showBackButton(boolean showOrNot){
+        if(getSupportActionBar() != null){
+            if(showOrNot == true){
+                getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            } else {
+                getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+            }
         }
     }
 

@@ -8,6 +8,8 @@ import android.support.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Stack;
 
 /**
  * Created by viorel on 16.08.2016.
@@ -17,24 +19,28 @@ import java.util.List;
 public class MusicRetriever {
     private ContentResolver contentResolver;
     private List<Song> allSongs;
-    private List<Song> tempSongList; //can be used for both album and artists selection
-    private List<Album> albums;
-    private boolean isViewingTempList = false;
+    private Stack<Object> artistsStack, albumsStack;
 
     public MusicRetriever(ContentResolver newContentResolver) {
         contentResolver = newContentResolver;
         allSongs = new ArrayList<>();
-        albums   = new ArrayList<>();
-        tempSongList = new ArrayList<>();
+        albumsStack = new Stack<>();
+        artistsStack = new Stack<>();
     }
 
+    // TODO Reimplement this method to not exit when a cursor is either null or empty
     public void prepare(){
         Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
 
+        // Songs Query
         String selection = MediaStore.Audio.Media.IS_MUSIC + " = 1",
                 projection[] = null;
 
-        Cursor cursor = contentResolver.query(uri, projection, selection, null, null);
+        Cursor cursor = contentResolver.query(
+                uri,
+                projection,
+                selection, null, /*selection args*/
+                null); /* sort order */
 
         if(cursor == null){
             System.err.println("Failed to retrieve songs: cursor is null");
@@ -62,10 +68,10 @@ public class MusicRetriever {
             ));
         } while (cursor.moveToNext());
 
-
-        projection = new String[] {MediaStore.Audio.AlbumColumns.ALBUM,
-                                            MediaStore.Audio.AlbumColumns.ARTIST,
-                                            MediaStore.Audio.AlbumColumns.ALBUM_ID};
+        // Album Query
+        projection = new String[]{ MediaStore.Audio.AlbumColumns.ALBUM,
+                                    MediaStore.Audio.AlbumColumns.ARTIST,
+                                     MediaStore.Audio.AlbumColumns.ALBUM_ID};
         selection = MediaStore.Audio.AlbumColumns.ALBUM +
                 " IS NOT NULL) GROUP BY (" + MediaStore.Audio.AlbumColumns.ALBUM;
 
@@ -85,13 +91,77 @@ public class MusicRetriever {
         albumColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.AlbumColumns.ALBUM);
         int albumId = cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM_ID);
 
+        List<Album> albumList = new ArrayList<>();
         do{
-            albums.add(new Album(
+            albumList.add(new Album(
                     cursor.getString(artistColumn),
                     cursor.getString(albumColumn),
                     cursor.getLong(albumId)));
         } while (cursor.moveToNext());
+        albumsStack.push(albumList);
 
+        // Artists Query
+        projection = new String[]{MediaStore.Audio.ArtistColumns.ARTIST};
+        selection = MediaStore.Audio.ArtistColumns.ARTIST +
+                " IS NOT NULL) GROUP BY (" + MediaStore.Audio.ArtistColumns.ARTIST;
+
+        cursor = contentResolver.query(uri,projection,selection,null,null);
+
+        if(cursor == null){
+            System.err.println("Failed to retrieve artists: cursor is null");
+            return;
+        }
+
+        if(!cursor.moveToFirst()){
+            System.err.println("Failed to get first item. Empty Artist Cursor");
+            return;
+        }
+
+        artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.ArtistColumns.ARTIST);
+
+        String[] foundArtists = new String[cursor.getCount()];
+        int artistIterator = 0;
+        do{
+            foundArtists[artistIterator] = cursor.getString(artistColumn);
+            ++artistIterator;
+        }while(cursor.moveToNext());
+
+        projection = new String[]{MediaStore.Audio.AlbumColumns.ALBUM,
+                                    MediaStore.Audio.AlbumColumns.ALBUM_ID};
+
+        List<Album> listOfAlbumsPerArtist;
+        List<Artist> listOfArtists = new ArrayList<>();
+
+        for(String currentArtist : foundArtists){
+            selection = MediaStore.Audio.AlbumColumns.ARTIST + " = \"" + currentArtist + "\")" +
+                        " GROUP BY (\""+ currentArtist + "\"";
+            cursor = contentResolver.query(uri,projection,selection,null,null);
+
+            if(cursor == null){
+                System.err.println("Failed to retrieve artist albums: cursor is null");
+                return;
+            }
+
+            if(!cursor.moveToFirst()){
+                System.err.println("Failed to get first item. Empty Artist Albums Cursor");
+                return;
+            }
+            listOfAlbumsPerArtist = new ArrayList<>();
+            do{
+                albumColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.AlbumColumns.ALBUM);
+                albumId = cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM_ID);
+
+                listOfAlbumsPerArtist.
+                        add(new Album(currentArtist,
+                                cursor.getString(albumColumn),
+                                cursor.getLong(albumId)));
+
+
+            }while(cursor.moveToNext());
+
+            listOfArtists.add(new Artist(currentArtist,listOfAlbumsPerArtist));
+        }
+        artistsStack.push(listOfArtists);
 
         cursor.close();
         System.out.println("Music Retriever Ready!");
@@ -101,9 +171,56 @@ public class MusicRetriever {
        return allSongs;
     }
 
-    public List<Album> getAlbums() {
-        return albums;
+    public List<Album> getAlbums(){
+        return (List<Album>) albumsStack.get(0);
     }
+
+    public List<Artist> getArtists(){
+        return (List<Artist>) artistsStack.get(0);
+    }
+
+    public List<Album> getSelectedArtistAlbum(){
+        return (List<Album>) artistsStack.get(1);
+    }
+
+    public List<Song> getSongListOfSelectedAlbumOfSelectedArtist() { return (List<Song>) artistsStack.get(2);}
+
+    public List<Song> getSongListOfSelectedAlbumOfAlbumList(){
+        return (List<Song>) albumsStack.get(1);
+    }
+
+    public int getArtistStackSize(){
+        return artistsStack.size();
+    }
+
+    public int getAlbumStackSize(){
+        return albumsStack.size();
+    }
+
+    public void pushAlbumListToArtistStack(List<Album> newAlbumList){
+        artistsStack.push(newAlbumList);
+    }
+
+    public void pushSongListToArtistStack(List<Song> newSongList){
+        artistsStack.push(newSongList);
+    }
+
+    public void popAlbumListFromArtistStack(){
+        artistsStack.pop();
+    }
+
+    public void popSongListFromArtistStack(){
+        artistsStack.pop();
+    }
+
+    public void pushSongListToAlbumStack(List<Song> newSongList){
+        albumsStack.push(newSongList);
+    }
+
+    public void popSongListFromAlbumStack(){
+        albumsStack.pop();
+    }
+
 
     public String[] getSongsAsStringArray(){
         String[] songs = new String[allSongs.size()];
@@ -114,21 +231,51 @@ public class MusicRetriever {
     }
 
     public String[] getAlbumsAsStringArray(){
-        isViewingTempList = false;
 
-        String[] allAlbums = new String[albums.size()];
+        List<Album> albumList = (List<Album>) albumsStack.get(0);
+        String[] allAlbums = new String[albumList.size()];
+
         for(int i = 0; i < allAlbums.length; i++){
-            allAlbums[i] = albums.get(i).getTitle()+ "\n" + albums.get(i).getArtist();
+            allAlbums[i] = albumList.get(i).getTitle()+ "\n" + albumList.get(i).getArtist();
         }
 
         return allAlbums;
     }
 
-    @Nullable
-    public String[] getSongsByAlbumId(long albumId){
-        if(!tempSongList.isEmpty()){
-            tempSongList.clear();
+    public String[] getArtistsAsStringArray(){
+
+        List<Artist> artistList = (List<Artist>) artistsStack.get(0);
+        String allArtists[] = new String[artistList.size()];
+
+        for(int i = 0; i < allArtists.length; i++){
+            allArtists[i] = artistList.get(i).getArtistName();
         }
+
+        return allArtists;
+    }
+
+    public String[] getAlbumListAsStringArray(List<Album> albumList){
+        String[] albums = new String[albumList.size()];
+
+        for(int i = 0; i < albums.length; i++){
+            albums[i] = albumList.get(i).getTitle();
+        }
+
+        return albums;
+    }
+
+    public String[] getSongListFromAlbumAsStringArray(List<Song> songList){
+        String[] songs = new String[songList.size()];
+
+        for(int i = 0; i < songs.length; i++){
+            songs[i] = songList.get(i).getArtist() + " - " + songList.get(i).getTitle();
+        }
+
+        return songs;
+    }
+
+    @Nullable
+    public List<Song> getSongsByAlbumId(long albumId) throws Exception{
 
         Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
 
@@ -152,12 +299,12 @@ public class MusicRetriever {
 
         if(cursor == null){
             System.err.println("Failed to retrieve music: cursor is null");
-            return null;
+            throw new Exception("Null Cursor");
         }
 
         if(!cursor.moveToFirst()){
             System.err.println("Failed to get first item. Empty Cursor");
-            return null;
+            throw new Exception("Empty Cursor");
         }
 
         int artistColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST),
@@ -165,10 +312,10 @@ public class MusicRetriever {
                 albumColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM),
                 durationColumn = cursor.getColumnIndex(MediaStore.Audio.Media.DURATION),
                 idColumn = cursor.getColumnIndex(MediaStore.Audio.Media._ID);
-
+        List<Song> tempList = new ArrayList<>();
 
         do{
-            tempSongList.add(new Song(
+            tempList.add(new Song(
                     cursor.getLong(idColumn),
                     cursor.getString(artistColumn),
                     cursor.getString(titleColumn),
@@ -179,38 +326,9 @@ public class MusicRetriever {
 
         cursor.close();
 
-        isViewingTempList = true;
-
-        String songs[] = new String[tempSongList.size()],
-                artist, title;
-
-        for(int i = 0; i < songs.length; i++){
-            artist =  tempSongList.get(i).getArtist();
-            title = tempSongList.get(i).getTitle();
-            songs[i] = artist + " - " + title;
-        }
-
-        return songs;
+        return tempList;
     }
 
-    public List<Song> getTempSongList() {
-        return tempSongList;
-    }
-
-    public boolean isViewingTempList(){
-        return isViewingTempList;
-    }
-
-    public String[] getTempSongListAsArray(){
-        String songs[] = new String[tempSongList.size()],
-                songTitle, artist;
-        for(int i = 0; i < songs.length; i++){
-            artist = tempSongList.get(i).getArtist();
-            songTitle = tempSongList.get(i).getTitle();
-            songs[i] = artist + " - " + songTitle;
-        }
-        return songs;
-    }
 
 
 }

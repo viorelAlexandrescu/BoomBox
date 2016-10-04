@@ -11,7 +11,7 @@ public class Artist {
     private String artistName;
     private List<Album> albumList;
 
-    public Artist(String newArtistName, List<Album> newAlbums){
+    public Artist(String newArtistName, List<Album> newAlbums) {
         this.artistName = newArtistName;
         this.albumList = newAlbums;
     }
