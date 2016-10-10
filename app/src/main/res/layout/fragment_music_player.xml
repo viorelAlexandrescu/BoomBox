@@ -2,8 +2,9 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:weightSum="100"
     android:orientation="vertical"
-    android:weightSum="100">
+    android:baselineAligned="false">
 
         <ImageView
             android:id="@+id/imgView_playback_album_cover"
@@ -20,17 +21,49 @@
             android:layout_weight="32">
 
 
-                <android.support.v7.widget.AppCompatSeekBar
-                    android:id="@+id/playback_seekBar"
+                <LinearLayout
+                    android:id="@+id/seekbarLayout"
                     android:layout_width="match_parent"
-                    android:layout_height="32dp"
-                    android:background="@android:color/darker_gray" />
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/seekBar_time_horizontal_margin"
+                    android:paddingEnd="@dimen/seekBar_time_horizontal_margin"
+                    android:weightSum="100">
+
+                        <TextView
+                            android:id="@+id/currentSongPositionTV"
+                            android:layout_weight="11"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:textAlignment="center"
+                            android:textDirection="ltr"
+                            />
+
+                        <SeekBar
+                            android:id="@+id/playback_seekBar"
+                            android:layout_weight="78"
+                            android:layout_width="0dp"
+                            android:layout_height="32dp"
+                            android:background="@android:color/transparent"/>
+
+                        <TextView
+                            android:id="@+id/songDurationTV"
+                            android:layout_weight="11"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:textAlignment="center"
+                            />
+
+                </LinearLayout>
+
 
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_centerInParent="true"
-                    android:layout_below="@id/playback_seekBar" >
+                    android:layout_below="@id/seekbarLayout" >
 
                 <ImageButton
                     android:id="@+id/skip_to_previous_btn"
@@ -58,5 +91,7 @@
                     android:src="@drawable/ic_skip_next_white_48dp"/>
 
                 </LinearLayout>
+
+
         </RelativeLayout>
 </LinearLayout>

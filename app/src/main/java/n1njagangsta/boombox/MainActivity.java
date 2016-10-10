@@ -55,27 +55,45 @@ public class MainActivity extends AppCompatActivity
             // do not start app if you cannot access local data
         }
     }
+
     @Override
-    protected void onCreate(Bundle savedInstanceState){
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        if(ContextCompat.checkSelfPermission(getApplicationContext(),
-                Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+        if (ContextCompat.checkSelfPermission(getApplicationContext(),
+                Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{
                     Manifest.permission.READ_EXTERNAL_STORAGE}, PackageManager.PERMISSION_GRANTED);
-        } else {
-
-            musicRetriever = new MusicRetriever(this.getContentResolver());
-            musicRetriever.prepare();
-
-            mediaPlayer = new MediaPlayer();
-
-            prepareUI();
-            prepareListFragment();
-
-            musicPlayerFragment = new MusicPlayerFragment();
         }
+
+        musicRetriever = new MusicRetriever(this.getContentResolver());
+        musicRetriever.prepare();
+
+        mediaPlayer = new MediaPlayer();
+        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mediaPlayer) {
+                isPlayButtonClicked = false;
+                quickFAB.setImageResource(R.drawable.ic_play_arrow_white_48dp);
+                if (musicPlayerFragment.isVisible()) {
+                    musicPlayerFragment.changePlaybackButtonImage(false);
+                }
+            }
+        });
+        mediaPlayer.setOnSeekCompleteListener(new MediaPlayer.OnSeekCompleteListener() {
+            @Override
+            public void onSeekComplete(MediaPlayer mediaPlayer) {
+                if (musicPlayerFragment.isVisible()) {
+                    musicPlayerFragment.changePlaybackButtonImage(true);
+                }
+                startPlayback();
+            }
+        });
+
+        prepareUI();
+        prepareListFragment();
+
+        musicPlayerFragment = new MusicPlayerFragment();
     }
 
     @Override
@@ -174,6 +192,16 @@ public class MainActivity extends AppCompatActivity
                 Bundle bundle = new Bundle();
                 bundle.putBoolean("mediaPlayerStatus",mediaPlayer.isPlaying());
 
+                int songDuration = mediaPlayer.getDuration(),
+                        currentPosition = mediaPlayer.getCurrentPosition();
+
+                if(songDuration == -1){
+                    bundle.putInt("songDuration", 0);
+                }else {
+                    bundle.putInt("songCurrentPosition", currentPosition);
+                    bundle.putInt("songDuration", songDuration);
+                }
+
                 quickFAB.hide();
                 tabLayout.setVisibility(View.GONE);
 
@@ -208,16 +236,23 @@ public class MainActivity extends AppCompatActivity
     public void onPlaybackClick() {
         if(mediaPlayer.isPlaying()){
             pausePlayback();
-            musicPlayerFragment.changePlaybackButtonImage(mediaPlayer.isPlaying());
         } else {
             startPlayback();
-            musicPlayerFragment.changePlaybackButtonImage(mediaPlayer.isPlaying());
         }
+        isPlayButtonClicked = !isPlayButtonClicked;
+        musicPlayerFragment.changePlaybackButtonImage(mediaPlayer.isPlaying());
+    }
+
+    @Override
+    public void onSeek(int seekValue) {
+        pausePlayback();
+        mediaPlayer.seekTo(seekValue);
     }
 
     private void startPlayback(){
         mediaPlayer.start();
         quickFAB.setImageResource(R.drawable.ic_pause_white_48dp);
+
     }
 
     private void pausePlayback(){
@@ -247,13 +282,12 @@ public class MainActivity extends AppCompatActivity
         quickFAB.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                isPlayButtonClicked = !isPlayButtonClicked;
                 if(isPlayButtonClicked){
                     startPlayback();
-
                 } else {
                     pausePlayback();
                 }
-                isPlayButtonClicked = !isPlayButtonClicked;
             }
         });
 
@@ -367,7 +401,9 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void onSongSelect(List<Song> songs, int songItemIndex) {
-        mediaPlayer.stop();
+        if(mediaPlayer.isPlaying()){
+            mediaPlayer.stop();
+        }
         mediaPlayer.reset();
 
         try {
@@ -384,7 +420,7 @@ public class MainActivity extends AppCompatActivity
 
     private void showBackButton(boolean showOrNot){
         if(getSupportActionBar() != null){
-            if(showOrNot == true){
+            if(showOrNot){
                 getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             } else {
                 getSupportActionBar().setDisplayHomeAsUpEnabled(false);

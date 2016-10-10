@@ -26,6 +26,10 @@ public class MusicListFragment extends Fragment implements AdapterView.OnItemCli
     public MusicListFragment(){
     }
 
+    public interface OnItemSelectedListener{
+        void OnListItemPicked(int index);
+    }
+
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
@@ -92,10 +96,6 @@ public class MusicListFragment extends Fragment implements AdapterView.OnItemCli
     @Override
     public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
         mCallback.OnListItemPicked(i);
-    }
-
-    public interface OnItemSelectedListener{
-        void OnListItemPicked(int index);
     }
 
     public void changeContents(String[] newData){

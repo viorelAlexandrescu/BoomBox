@@ -126,38 +126,17 @@ public class MusicRetriever {
             ++artistIterator;
         }while(cursor.moveToNext());
 
-        projection = new String[]{MediaStore.Audio.AlbumColumns.ALBUM,
-                                    MediaStore.Audio.AlbumColumns.ALBUM_ID};
-
         List<Album> listOfAlbumsPerArtist;
         List<Artist> listOfArtists = new ArrayList<>();
 
         for(String currentArtist : foundArtists){
-            selection = MediaStore.Audio.AlbumColumns.ARTIST + " = \"" + currentArtist + "\")" +
-                        " GROUP BY (\""+ currentArtist + "\"";
-            cursor = contentResolver.query(uri,projection,selection,null,null);
-
-            if(cursor == null){
-                System.err.println("Failed to retrieve artist albums: cursor is null");
-                return;
-            }
-
-            if(!cursor.moveToFirst()){
-                System.err.println("Failed to get first item. Empty Artist Albums Cursor");
-                return;
-            }
             listOfAlbumsPerArtist = new ArrayList<>();
-            do{
-                albumColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.AlbumColumns.ALBUM);
-                albumId = cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM_ID);
 
-                listOfAlbumsPerArtist.
-                        add(new Album(currentArtist,
-                                cursor.getString(albumColumn),
-                                cursor.getLong(albumId)));
-
-
-            }while(cursor.moveToNext());
+            for(int i = 0; i < getAlbums().size(); i++){
+                if(getAlbums().get(i).getArtist().contentEquals(currentArtist)){
+                    listOfAlbumsPerArtist.add(getAlbums().get(i));
+                }
+            }
 
             listOfArtists.add(new Artist(currentArtist,listOfAlbumsPerArtist));
         }
@@ -220,7 +199,6 @@ public class MusicRetriever {
     public void popSongListFromAlbumStack(){
         albumsStack.pop();
     }
-
 
     public String[] getSongsAsStringArray(){
         String[] songs = new String[allSongs.size()];
