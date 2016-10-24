@@ -72,6 +72,7 @@ public class MusicRetriever {
         projection = new String[]{ MediaStore.Audio.AlbumColumns.ALBUM,
                                     MediaStore.Audio.AlbumColumns.ARTIST,
                                      MediaStore.Audio.AlbumColumns.ALBUM_ID};
+
         selection = MediaStore.Audio.AlbumColumns.ALBUM +
                 " IS NOT NULL) GROUP BY (" + MediaStore.Audio.AlbumColumns.ALBUM;
 
@@ -93,10 +94,18 @@ public class MusicRetriever {
 
         List<Album> albumList = new ArrayList<>();
         do{
+            ArrayList<Song> songsInAlbum = new ArrayList<>();
+            for(int i = 0; i < getSongs().size(); i++){
+                if(getSongs().get(i).getAlbum().contentEquals(cursor.getString(albumColumn))){
+                    songsInAlbum.add(getSongs().get(i));
+                }
+            }
+
             albumList.add(new Album(
                     cursor.getString(artistColumn),
                     cursor.getString(albumColumn),
-                    cursor.getLong(albumId)));
+                    cursor.getLong(albumId),
+                    songsInAlbum));
         } while (cursor.moveToNext());
         albumsStack.push(albumList);
 
@@ -158,7 +167,7 @@ public class MusicRetriever {
         return (List<Artist>) artistsStack.get(0);
     }
 
-    public List<Album> getSelectedArtistAlbum(){
+    public List<Album> getSelectedArtistAlbums(){
         return (List<Album>) artistsStack.get(1);
     }
 
@@ -251,62 +260,4 @@ public class MusicRetriever {
 
         return songs;
     }
-
-    @Nullable
-    public List<Song> getSongsByAlbumId(long albumId) throws Exception{
-
-        Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-
-        String projection[] = {
-                MediaStore.Audio.Media.ARTIST,
-                MediaStore.Audio.Media.TITLE,
-                MediaStore.Audio.Media.ALBUM,
-                MediaStore.Audio.Media.DURATION,
-                MediaStore.Audio.Media._ID  },
-
-                selectionArgs[] = null,
-                selection = MediaStore.Audio.Media.ALBUM_ID + " = " + albumId,
-
-                sortOrder = MediaStore.Audio.Media.DEFAULT_SORT_ORDER;
-
-        Cursor cursor = contentResolver.query(
-                uri,
-                projection,
-                selection, selectionArgs,
-                sortOrder);
-
-        if(cursor == null){
-            System.err.println("Failed to retrieve music: cursor is null");
-            throw new Exception("Null Cursor");
-        }
-
-        if(!cursor.moveToFirst()){
-            System.err.println("Failed to get first item. Empty Cursor");
-            throw new Exception("Empty Cursor");
-        }
-
-        int artistColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST),
-                titleColumn = cursor.getColumnIndex(MediaStore.Audio.Media.TITLE),
-                albumColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM),
-                durationColumn = cursor.getColumnIndex(MediaStore.Audio.Media.DURATION),
-                idColumn = cursor.getColumnIndex(MediaStore.Audio.Media._ID);
-        List<Song> tempList = new ArrayList<>();
-
-        do{
-            tempList.add(new Song(
-                    cursor.getLong(idColumn),
-                    cursor.getString(artistColumn),
-                    cursor.getString(titleColumn),
-                    cursor.getString(albumColumn),
-                    cursor.getLong(durationColumn)
-            ));
-        } while (cursor.moveToNext());
-
-        cursor.close();
-
-        return tempList;
-    }
-
-
-
 }

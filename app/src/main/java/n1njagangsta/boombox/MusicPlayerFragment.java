@@ -25,6 +25,8 @@ SeekBar.OnSeekBarChangeListener{
 
     private TextView songDurationTextView, songCurrentPositionTextView;
 
+
+
     private boolean isMusicPlaying;
 
     private int songDuration, songCurrentPosition;
@@ -98,7 +100,6 @@ SeekBar.OnSeekBarChangeListener{
         if(isSeekFromUser){
             mCallback.onSeek(i);
         }
-        songCurrentPositionTextView.setText(Song.getTimeInMinutesAndSeconds(i));
     }
 
     @Override
@@ -108,7 +109,8 @@ SeekBar.OnSeekBarChangeListener{
 
     @Override
     public void onStopTrackingTouch(SeekBar seekBar) {
-
+        songCurrentPositionTextView.setText(
+                Song.getTimeInMinutesAndSeconds(seekBar.getProgress()));
     }
 
     public void changePlaybackButtonImage(boolean mediaPlayerIsPlaying){
@@ -118,5 +120,4 @@ SeekBar.OnSeekBarChangeListener{
             playbackButton.setImageResource(R.drawable.ic_play_arrow_white_48dp);
         }
     }
-
 }

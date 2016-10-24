@@ -102,6 +102,7 @@ public class MusicListFragment extends Fragment implements AdapterView.OnItemCli
         if(!stringArrayAdapter.isEmpty() || stringArrayAdapter != null){
             stringArrayAdapter.clear();
             stringArrayAdapter.addAll(newData);
+            elementsList.smoothScrollToPosition(0);
         }
     }
 

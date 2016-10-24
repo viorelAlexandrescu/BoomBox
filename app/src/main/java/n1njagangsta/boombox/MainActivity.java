@@ -1,7 +1,9 @@
 package n1njagangsta.boombox;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -19,9 +21,15 @@ import java.io.IOException;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity
-        implements MusicListFragment.OnItemSelectedListener, MusicPlayerFragment.OnPlayerInteractionListener{
+        implements MusicListFragment.OnItemSelectedListener,
+                    MusicPlayerFragment.OnPlayerInteractionListener,
+                    AudioManager.OnAudioFocusChangeListener{
 
     private TabLayout tabLayout;
+
+    private FloatingActionButton quickFAB;
+
+    private Toolbar myToolbar;
 
     private MusicListFragment musicListFragment;
 
@@ -29,9 +37,7 @@ public class MainActivity extends AppCompatActivity
 
     private MusicRetriever musicRetriever;
 
-    private FloatingActionButton quickFAB;
-
-    private Toolbar myToolbar;
+    private AudioManager audioManager;
 
     private static MediaPlayer mediaPlayer;
 
@@ -90,6 +96,9 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
+        audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        audioManager.requestAudioFocus(this,AudioManager.STREAM_MUSIC,AudioManager.AUDIOFOCUS_GAIN);
+
         prepareUI();
         prepareListFragment();
 
@@ -120,7 +129,7 @@ public class MainActivity extends AppCompatActivity
                                 musicRetriever.popSongListFromArtistStack();
                                 musicListFragment.changeContents(
                                         musicRetriever.getAlbumListAsStringArray(
-                                                musicRetriever.getSelectedArtistAlbum()));
+                                                musicRetriever.getSelectedArtistAlbums()));
                                 break;
                         }
                         break;
@@ -154,7 +163,7 @@ public class MainActivity extends AppCompatActivity
                     case 2:
                         bundleData.putStringArray(artistsKey,
                                 musicRetriever.getAlbumListAsStringArray(
-                                        musicRetriever.getSelectedArtistAlbum()));
+                                        musicRetriever.getSelectedArtistAlbums()));
                         showBackButton(true);
                         break;
                     case 3:
@@ -304,7 +313,7 @@ public class MainActivity extends AppCompatActivity
                             case 2:
                                 musicListFragment.changeContents(
                                         musicRetriever.getAlbumListAsStringArray(
-                                                musicRetriever.getSelectedArtistAlbum()));
+                                                musicRetriever.getSelectedArtistAlbums()));
                                 showBackButton(true);
                                 break;
                             case 3:
@@ -357,14 +366,13 @@ public class MainActivity extends AppCompatActivity
 
                 musicListFragment.changeContents(
                         musicRetriever.getAlbumListAsStringArray(
-                                musicRetriever.getSelectedArtistAlbum()));
+                                musicRetriever.getSelectedArtistAlbums()));
                 showBackButton(true);
                 break;
             case 2:
                 try{
                     musicRetriever.pushSongListToArtistStack(
-                            musicRetriever.getSongsByAlbumId(
-                                    musicRetriever.getSelectedArtistAlbum().get(artistItemIndex).getAlbumId()));
+                            musicRetriever.getSelectedArtistAlbums().get(artistItemIndex).getAlbumSongList());
                     musicListFragment.changeContents(
                             musicRetriever.getSongListFromAlbumAsStringArray(
                                     musicRetriever.getSongListOfSelectedAlbumOfSelectedArtist()));
@@ -384,8 +392,7 @@ public class MainActivity extends AppCompatActivity
             case 1:
                 try {
                     musicRetriever.pushSongListToAlbumStack(
-                            musicRetriever.getSongsByAlbumId(
-                                    musicRetriever.getAlbums().get(albumItemIndex).getAlbumId()));
+                            musicRetriever.getAlbums().get(albumItemIndex).getAlbumSongList());
                     musicListFragment.changeContents(
                             musicRetriever.getSongListFromAlbumAsStringArray(
                                     musicRetriever.getSongListOfSelectedAlbumOfAlbumList()));
@@ -428,4 +435,12 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    @Override
+    public void onAudioFocusChange(int focusChange) {
+        if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
+            pausePlayback();
+        } else if (focusChange == AudioManager.AUDIOFOCUS_GAIN) {
+            startPlayback();
+        }
+    }
 }
