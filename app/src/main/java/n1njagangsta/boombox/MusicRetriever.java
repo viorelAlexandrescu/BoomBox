@@ -1,14 +1,16 @@
 package n1njagangsta.boombox;
 
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.provider.MediaStore;
-import android.support.annotation.Nullable;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Stack;
 
 /**
@@ -20,6 +22,7 @@ public class MusicRetriever {
     private ContentResolver contentResolver;
     private List<Song> allSongs;
     private Stack<Object> artistsStack, albumsStack;
+    private Album currentSelectedAlbum;
 
     public MusicRetriever(ContentResolver newContentResolver) {
         contentResolver = newContentResolver;
@@ -71,12 +74,14 @@ public class MusicRetriever {
         // Album Query
         projection = new String[]{ MediaStore.Audio.AlbumColumns.ALBUM,
                                     MediaStore.Audio.AlbumColumns.ARTIST,
-                                     MediaStore.Audio.AlbumColumns.ALBUM_ID};
+                                     MediaStore.Audio.Albums._ID,
+                                      MediaStore.Audio.AlbumColumns.ALBUM_ART};
 
-        selection = MediaStore.Audio.AlbumColumns.ALBUM +
+        selection = MediaStore.Audio.Albums.ALBUM +
                 " IS NOT NULL) GROUP BY (" + MediaStore.Audio.AlbumColumns.ALBUM;
 
-        cursor = contentResolver.query(uri, projection, selection, null, null);
+        cursor = contentResolver.query(
+                MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI, projection, selection, null, null);
 
         if(cursor == null){
             System.err.println("Failed to retrieve albums: cursor is null");
@@ -90,7 +95,8 @@ public class MusicRetriever {
 
         artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.AlbumColumns.ARTIST);
         albumColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.AlbumColumns.ALBUM);
-        int albumId = cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM_ID);
+        int albumId = cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums._ID),
+                albumArtColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.AlbumColumns.ALBUM_ART);
 
         List<Album> albumList = new ArrayList<>();
         do{
@@ -101,11 +107,14 @@ public class MusicRetriever {
                 }
             }
 
+            Bitmap albumArt = BitmapFactory.decodeFile(cursor.getString(albumArtColumn));
+
             albumList.add(new Album(
                     cursor.getString(artistColumn),
                     cursor.getString(albumColumn),
                     cursor.getLong(albumId),
-                    songsInAlbum));
+                    songsInAlbum,
+                    albumArt));
         } while (cursor.moveToNext());
         albumsStack.push(albumList);
 
@@ -259,5 +268,13 @@ public class MusicRetriever {
         }
 
         return songs;
+    }
+
+    public Album getCurrentSelectedAlbum() {
+        return currentSelectedAlbum;
+    }
+
+    public void setCurrentSelectedAlbum(Album currentSelectedAlbum) {
+        this.currentSelectedAlbum = currentSelectedAlbum;
     }
 }

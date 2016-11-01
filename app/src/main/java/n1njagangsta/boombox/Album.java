@@ -1,5 +1,10 @@
 package n1njagangsta.boombox;
 
+import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
+import android.support.annotation.Nullable;
+import android.widget.ImageView;
+
 import java.util.List;
 
 /**
@@ -11,12 +16,15 @@ public class Album {
     private String title, artist;
     private long albumId;
     private List<Song> albumSongList;
+    private Bitmap albumArt;
 
-    public Album(String newArtist, String newTitle, long newAlbumId, List<Song> newAlbumSongList){
+    public Album(String newArtist, String newTitle, long newAlbumId,
+                 List<Song> newAlbumSongList, Bitmap newAlbumArt){
         this.title = newTitle;
         this.artist = newArtist;
         this.albumId = newAlbumId;
         this.albumSongList = newAlbumSongList;
+        this.albumArt = newAlbumArt;
     }
 
     public String getTitle(){
@@ -33,5 +41,10 @@ public class Album {
 
     public List<Song> getAlbumSongList(){
         return albumSongList;
+    }
+
+    @Nullable
+    public Bitmap getAlbumArt(){
+        return albumArt;
     }
 }

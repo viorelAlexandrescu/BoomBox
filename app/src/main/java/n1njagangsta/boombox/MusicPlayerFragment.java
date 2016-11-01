@@ -3,16 +3,16 @@ package n1njagangsta.boombox;
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
-
-import java.util.concurrent.TimeUnit;
 
 public class MusicPlayerFragment extends Fragment implements View.OnClickListener,
 SeekBar.OnSeekBarChangeListener{
@@ -25,11 +25,12 @@ SeekBar.OnSeekBarChangeListener{
 
     private TextView songDurationTextView, songCurrentPositionTextView;
 
+    private ImageView albumArtImageView;
 
-
-    private boolean isMusicPlaying;
+    private Bitmap albumArtBitmap;
 
     private int songDuration, songCurrentPosition;
+    private boolean isMusicPlaying;
 
     public MusicPlayerFragment(){}
 
@@ -55,9 +56,9 @@ SeekBar.OnSeekBarChangeListener{
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        isMusicPlaying = getArguments().getBoolean("mediaPlayerStatus");
         songDuration = getArguments().getInt("songDuration");
         songCurrentPosition = getArguments().getInt("songCurrentPosition");
-        isMusicPlaying = getArguments().getBoolean("mediaPlayerStatus");
     }
 
     @Nullable
@@ -65,6 +66,9 @@ SeekBar.OnSeekBarChangeListener{
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
         View rootView = inflater.inflate(R.layout.fragment_music_player, container, false);
+
+        albumArtImageView = (ImageView)rootView.findViewById(R.id.musicPlayerFragment_albumArt_ImgView);
+        albumArtImageView.setImageBitmap(albumArtBitmap);
 
         seekBar = (SeekBar) rootView.findViewById(R.id.playback_seekBar);
         if(songDuration > 0){
@@ -74,11 +78,7 @@ SeekBar.OnSeekBarChangeListener{
         seekBar.setOnSeekBarChangeListener(this);
 
         playbackButton = (ImageButton) rootView.findViewById(R.id.play_pause_btn);
-        if(isMusicPlaying){
-            playbackButton.setImageResource(R.drawable.ic_pause_white_48dp);
-        } else {
-            playbackButton.setImageResource(R.drawable.ic_play_arrow_white_48dp);
-        }
+        changePlaybackButtonImage(isMusicPlaying);
         playbackButton.setOnClickListener(this);
 
         songDurationTextView = (TextView) rootView.findViewById(R.id.songDurationTV);
@@ -113,11 +113,15 @@ SeekBar.OnSeekBarChangeListener{
                 Song.getTimeInMinutesAndSeconds(seekBar.getProgress()));
     }
 
-    public void changePlaybackButtonImage(boolean mediaPlayerIsPlaying){
-        if(mediaPlayerIsPlaying){
+    public void changePlaybackButtonImage(boolean isMusicPlaying){
+        if(isMusicPlaying){
             playbackButton.setImageResource(R.drawable.ic_pause_white_48dp);
         } else {
             playbackButton.setImageResource(R.drawable.ic_play_arrow_white_48dp);
         }
+    }
+
+    public void setAlbumArtBitmap(Bitmap newAlbumArtBitmap){
+        this.albumArtBitmap = newAlbumArtBitmap;
     }
 }
