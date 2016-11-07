@@ -3,23 +3,31 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 24
     buildToolsVersion "23.0.2"
-
     defaultConfig {
         applicationId "n1njagangsta.boombox"
         minSdkVersion 23
         targetSdkVersion 23
         versionCode 1
-        versionName "1.1.1"
+        versionName '1.1.8'
+        jackOptions {
+            enabled true
+        }
     }
     buildTypes {
-        release{
+        release {
             minifyEnabled true
         }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    productFlavors {
     }
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     compile 'com.android.support:appcompat-v7:24.0.0'
     compile 'com.android.support:design:24.0.0'
 }

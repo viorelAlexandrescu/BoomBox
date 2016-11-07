@@ -443,8 +443,10 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+
     @Override
     public void onAudioFocusChange(int focusChange) {
+        // add more cases if you wish to approach more audio focus cases
         switch (focusChange){
             case AudioManager.AUDIOFOCUS_LOSS:
                 if(mediaPlayer.isPlaying()){
@@ -454,7 +456,14 @@ public class MainActivity extends AppCompatActivity
                     }
                 }
                 break;
-            // add more cases if you wish to approach more audio focus cases
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+                if(mediaPlayer.isPlaying()){
+                    pausePlayback();
+                    if(musicPlayerFragment.isVisible()){
+                        musicPlayerFragment.changePlaybackButtonImage(mediaPlayer.isPlaying());
+                    }
+                }
+                break;
         }
     }
 }

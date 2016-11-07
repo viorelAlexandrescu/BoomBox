@@ -14,8 +14,7 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-public class MusicPlayerFragment extends Fragment implements View.OnClickListener,
-SeekBar.OnSeekBarChangeListener{
+public class MusicPlayerFragment extends Fragment{
 
     private OnPlayerInteractionListener mCallback;
 
@@ -75,11 +74,34 @@ SeekBar.OnSeekBarChangeListener{
             seekBar.setMax(songDuration);
             seekBar.setProgress(songCurrentPosition);
         }
-        seekBar.setOnSeekBarChangeListener(this);
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int value, boolean isSeekFromUser) {
+                if(isSeekFromUser){
+                    mCallback.onSeek(value);
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                songCurrentPositionTextView.setText(
+                        Song.getTimeInMinutesAndSeconds(seekBar.getProgress()));
+            }
+        });
 
         playbackButton = (ImageButton) rootView.findViewById(R.id.play_pause_btn);
         changePlaybackButtonImage(isMusicPlaying);
-        playbackButton.setOnClickListener(this);
+        playbackButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mCallback.onPlaybackClick();
+            }
+        });
 
         songDurationTextView = (TextView) rootView.findViewById(R.id.songDurationTV);
         songDurationTextView.setText(Song.getTimeInMinutesAndSeconds(songDuration));
@@ -90,28 +112,6 @@ SeekBar.OnSeekBarChangeListener{
         return rootView;
     }
 
-    @Override
-    public void onClick(View view) {
-        mCallback.onPlaybackClick();
-    }
-
-    @Override
-    public void onProgressChanged(SeekBar seekBar, int i, boolean isSeekFromUser) {
-        if(isSeekFromUser){
-            mCallback.onSeek(i);
-        }
-    }
-
-    @Override
-    public void onStartTrackingTouch(SeekBar seekBar) {
-
-    }
-
-    @Override
-    public void onStopTrackingTouch(SeekBar seekBar) {
-        songCurrentPositionTextView.setText(
-                Song.getTimeInMinutesAndSeconds(seekBar.getProgress()));
-    }
 
     public void changePlaybackButtonImage(boolean isMusicPlaying){
         if(isMusicPlaying){
