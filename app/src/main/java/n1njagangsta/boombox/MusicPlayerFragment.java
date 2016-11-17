@@ -13,6 +13,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MusicPlayerFragment extends Fragment{
 
@@ -73,6 +74,7 @@ public class MusicPlayerFragment extends Fragment{
         if(songDuration > 0){
             seekBar.setMax(songDuration);
             seekBar.setProgress(songCurrentPosition);
+            Toast.makeText(getActivity().getApplicationContext(), "Music Player Inflated", Toast.LENGTH_SHORT).show();
         }
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override

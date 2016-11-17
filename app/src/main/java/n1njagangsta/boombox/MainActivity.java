@@ -209,7 +209,7 @@ public class MainActivity extends AppCompatActivity
                     bundle.putInt("songCurrentPosition", currentPosition);
                     bundle.putInt("songDuration", songDuration);
                 }
-                if(musicRetriever.getCurrentSelectedAlbum() != null){
+                if(musicRetriever.getCurrentSelectedAlbum() != null) {
                     musicPlayerFragment.setAlbumArtBitmap(
                             musicRetriever.getCurrentSelectedAlbum().getAlbumArt());
                 }
@@ -442,7 +442,6 @@ public class MainActivity extends AppCompatActivity
             }
         }
     }
-
 
     @Override
     public void onAudioFocusChange(int focusChange) {
