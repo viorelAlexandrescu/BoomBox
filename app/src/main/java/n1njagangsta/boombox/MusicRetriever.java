@@ -1,17 +1,19 @@
 package n1njagangsta.boombox;
 
 import android.content.ContentResolver;
-import android.content.ContentUris;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.provider.MediaStore;
 
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
+
+import n1njagangsta.boombox.Model.Album;
+import n1njagangsta.boombox.Model.Artist;
+import n1njagangsta.boombox.Model.Song;
 
 /**
  * Created by viorel on 16.08.2016.

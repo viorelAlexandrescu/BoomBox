@@ -1,4 +1,4 @@
-package n1njagangsta.boombox;
+package n1njagangsta.boombox.Model;
 
 import android.content.ContentUris;
 import android.net.Uri;

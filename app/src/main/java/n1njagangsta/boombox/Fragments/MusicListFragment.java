@@ -1,4 +1,4 @@
-package n1njagangsta.boombox;
+package n1njagangsta.boombox.Fragments;
 
 
 import android.app.Activity;
@@ -16,6 +16,8 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+
+import n1njagangsta.boombox.R;
 
 
 public class MusicListFragment extends Fragment implements AdapterView.OnItemClickListener{

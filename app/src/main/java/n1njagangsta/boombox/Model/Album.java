@@ -1,9 +1,7 @@
-package n1njagangsta.boombox;
+package n1njagangsta.boombox.Model;
 
 import android.graphics.Bitmap;
-import android.graphics.drawable.Drawable;
 import android.support.annotation.Nullable;
-import android.widget.ImageView;
 
 import java.util.List;
 

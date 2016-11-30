@@ -1,4 +1,4 @@
-package n1njagangsta.boombox;
+package n1njagangsta.boombox.Fragments;
 
 import android.app.Activity;
 import android.app.Fragment;
@@ -14,6 +14,9 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import n1njagangsta.boombox.Model.Song;
+import n1njagangsta.boombox.R;
 
 public class MusicPlayerFragment extends Fragment{
 

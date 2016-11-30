@@ -1,7 +1,6 @@
-package n1njagangsta.boombox;
+package n1njagangsta.boombox.Activities;
 
 import android.Manifest;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
@@ -21,9 +20,15 @@ import android.widget.Toast;
 import java.io.IOException;
 import java.util.List;
 
+import n1njagangsta.boombox.Model.Song;
+import n1njagangsta.boombox.Fragments.MusicListFragment;
+import n1njagangsta.boombox.Fragments.MusicPlayerFragment;
+import n1njagangsta.boombox.MusicRetriever;
+import n1njagangsta.boombox.R;
+
 public class MainActivity extends AppCompatActivity
         implements MusicListFragment.OnItemSelectedListener,
-                    MusicPlayerFragment.OnPlayerInteractionListener,
+        MusicPlayerFragment.OnPlayerInteractionListener,
                     AudioManager.OnAudioFocusChangeListener{
 
     private TabLayout tabLayout;
@@ -112,116 +117,17 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()){
-            case android.R.id.home:
-                // here change Title + Subtitle Font size back to normal
-                switch (tabLayout.getSelectedTabPosition()){
-                    case 0:
-                        switch (musicRetriever.getArtistStackSize()){
-                            case 2:
-                                musicRetriever.popAlbumListFromArtistStack();
-                                musicListFragment.changeContents(
-                                        musicRetriever.getArtistsAsStringArray());
-                                showBackButton(false);
-                                break;
-                            case 3:
-                                musicRetriever.popSongListFromArtistStack();
-                                musicListFragment.changeContents(
-                                        musicRetriever.getAlbumListAsStringArray(
-                                                musicRetriever.getSelectedArtistAlbums()));
-                                break;
-                        }
-                        break;
-                    case 1:
-                        musicRetriever.popSongListFromAlbumStack();
-                        musicListFragment.changeContents(
-                                musicRetriever.getAlbumsAsStringArray());
-                        showBackButton(false );
-                        break;
-                }
-                break;
-
-            case R.id.return_to_list_menu_btn:
+        switch (item.getItemId()) {
+            case R.id.switch_between_screens:
                 if(musicListFragment.isVisible()){
-                    break;
+                    changeScreenToPlayer();
+                    item.setIcon(R.drawable.ic_list_white_48dp);
+                    item.setTitle(R.string.action_return_to_music_list);
+                } else {
+                    changeScreenToList();
+                    item.setIcon(R.drawable.ic_radio_white_48dp);
+                    item.setTitle(R.string.action_open_music_player);
                 }
-                quickFAB.show();
-                tabLayout.setVisibility(View.VISIBLE);
-
-                String artistsKey = "artistList",
-                        albumsKey = "albumList",
-                        songsKey = "songList";
-
-                Bundle bundleData = new Bundle();
-                bundleData.putStringArray(songsKey, musicRetriever.getSongsAsStringArray());
-
-                switch (musicRetriever.getArtistStackSize()){
-                    case 1:
-                        bundleData.putStringArray(artistsKey, musicRetriever.getArtistsAsStringArray());
-                        break;
-                    case 2:
-                        bundleData.putStringArray(artistsKey,
-                                musicRetriever.getAlbumListAsStringArray(
-                                        musicRetriever.getSelectedArtistAlbums()));
-                        showBackButton(true);
-                        break;
-                    case 3:
-                        bundleData.putStringArray(artistsKey,
-                                musicRetriever.getSongListFromAlbumAsStringArray(
-                                        musicRetriever.getSongListOfSelectedAlbumOfSelectedArtist()));
-                        showBackButton(true);
-                        break;
-                }
-
-                switch (musicRetriever.getAlbumStackSize()){
-                    case 1:
-                        bundleData.putStringArray(albumsKey, musicRetriever.getAlbumsAsStringArray());
-                        break;
-                    case 2:
-                        bundleData.putStringArray(albumsKey,
-                               musicRetriever.getSongListFromAlbumAsStringArray(
-                                       musicRetriever.getSongListOfSelectedAlbumOfAlbumList()));
-                        showBackButton(true);
-                        break;
-                }
-
-
-                bundleData.putInt("currentTabPosition", tabLayout.getSelectedTabPosition());
-                musicListFragment.setArguments(bundleData);
-
-                getFragmentManager().beginTransaction().
-                        replace(R.id.fragment_container, musicListFragment).commit();
-                break;
-
-            case R.id.open_music_player_btn:
-                if(musicPlayerFragment.isVisible()){
-                    break;
-                }
-                Bundle bundle = new Bundle();
-                bundle.putBoolean("mediaPlayerStatus", mediaPlayer.isPlaying());
-
-                int songDuration = mediaPlayer.getDuration(),
-                        currentPosition = mediaPlayer.getCurrentPosition();
-
-                if(songDuration == -1){
-                    bundle.putInt("songDuration", 0);
-                }else {
-                    bundle.putInt("songCurrentPosition", currentPosition);
-                    bundle.putInt("songDuration", songDuration);
-                }
-                if(musicRetriever.getCurrentSelectedAlbum() != null) {
-                    musicPlayerFragment.setAlbumArtBitmap(
-                            musicRetriever.getCurrentSelectedAlbum().getAlbumArt());
-                }
-
-                quickFAB.hide();
-                tabLayout.setVisibility(View.GONE);
-
-                showBackButton(false);
-
-                musicPlayerFragment.setArguments(bundle);
-                getFragmentManager().beginTransaction().
-                        replace(R.id.fragment_container, musicPlayerFragment).commit();
                 break;
         }
         return true;
@@ -308,19 +214,16 @@ public class MainActivity extends AppCompatActivity
                         switch (musicRetriever.getArtistStackSize()){
                             case 1:
                                 musicListFragment.changeContents(musicRetriever.getArtistsAsStringArray());
-                                showBackButton(false);
                                 break;
                             case 2:
                                 musicListFragment.changeContents(
                                         musicRetriever.getAlbumListAsStringArray(
                                                 musicRetriever.getSelectedArtistAlbums()));
-                                showBackButton(true);
                                 break;
                             case 3:
                                 musicListFragment.changeContents(
                                         musicRetriever.getSongListFromAlbumAsStringArray(
                                                 musicRetriever.getSongListOfSelectedAlbumOfSelectedArtist()));
-                                showBackButton(true);
                                 break;
                         }
                         break;
@@ -329,19 +232,16 @@ public class MainActivity extends AppCompatActivity
                             case 1:
                                 musicListFragment.changeContents(
                                         musicRetriever.getAlbumsAsStringArray());
-                                showBackButton(false);
                                 break;
                             case 2:
                                 musicListFragment.changeContents(
                                         musicRetriever.getSongListFromAlbumAsStringArray(
                                                 musicRetriever.getSongListOfSelectedAlbumOfAlbumList()));
-                                showBackButton(true);
                                 break;
                         }
                         break;
                     case 2:
                         musicListFragment.changeContents(musicRetriever.getSongsAsStringArray());
-                        showBackButton(false);
                         break;
                 }
             }
@@ -367,7 +267,6 @@ public class MainActivity extends AppCompatActivity
                 musicListFragment.changeContents(
                         musicRetriever.getAlbumListAsStringArray(
                                 musicRetriever.getSelectedArtistAlbums()));
-                showBackButton(true);
                 break;
             case 2:
                 try{
@@ -404,7 +303,6 @@ public class MainActivity extends AppCompatActivity
                     musicListFragment.changeContents(
                             musicRetriever.getSongListFromAlbumAsStringArray(
                                     musicRetriever.getSongListOfSelectedAlbumOfAlbumList()));
-                    showBackButton(true);
                 } catch (Exception e){
                     Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
@@ -433,14 +331,82 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    private void showBackButton(boolean showOrNot){
-        if(getSupportActionBar() != null){
-            if(showOrNot){
-                getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            } else {
-                getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+    private void changeScreenToList() {
+            if(musicListFragment.isVisible()){
+                return;
             }
+            quickFAB.show();
+            tabLayout.setVisibility(View.VISIBLE);
+
+            String artistsKey = "artistList",
+                    albumsKey = "albumList",
+                    songsKey = "songList";
+
+            Bundle bundleData = new Bundle();
+            bundleData.putStringArray(songsKey, musicRetriever.getSongsAsStringArray());
+
+            switch (musicRetriever.getArtistStackSize()){
+                case 1:
+                    bundleData.putStringArray(artistsKey, musicRetriever.getArtistsAsStringArray());
+                    break;
+                case 2:
+                    bundleData.putStringArray(artistsKey,
+                            musicRetriever.getAlbumListAsStringArray(
+                                    musicRetriever.getSelectedArtistAlbums()));
+                    break;
+                case 3:
+                    bundleData.putStringArray(artistsKey,
+                            musicRetriever.getSongListFromAlbumAsStringArray(
+                                    musicRetriever.getSongListOfSelectedAlbumOfSelectedArtist()));
+                    break;
+            }
+
+            switch (musicRetriever.getAlbumStackSize()){
+                case 1:
+                    bundleData.putStringArray(albumsKey, musicRetriever.getAlbumsAsStringArray());
+                    break;
+                case 2:
+                    bundleData.putStringArray(albumsKey,
+                            musicRetriever.getSongListFromAlbumAsStringArray(
+                                    musicRetriever.getSongListOfSelectedAlbumOfAlbumList()));
+                    break;
+            }
+
+
+            bundleData.putInt("currentTabPosition", tabLayout.getSelectedTabPosition());
+            musicListFragment.setArguments(bundleData);
+
+            getFragmentManager().beginTransaction().
+                    replace(R.id.fragment_container, musicListFragment).commit();
+    }
+
+    private void changeScreenToPlayer() {
+        Bundle bundle = new Bundle();
+        bundle.putBoolean("mediaPlayerStatus", mediaPlayer.isPlaying());
+
+        int songDuration = mediaPlayer.getDuration(),
+                currentPosition = mediaPlayer.getCurrentPosition();
+
+        if (songDuration == -1) {
+            bundle.putInt("songDuration", 0);
+        } else {
+            bundle.putInt("songCurrentPosition", currentPosition);
+            bundle.putInt("songDuration", songDuration);
         }
+        if (musicRetriever.getCurrentSelectedAlbum() != null) {
+            musicPlayerFragment.setAlbumArtBitmap(
+                    musicRetriever.getCurrentSelectedAlbum().getAlbumArt());
+        }
+
+        quickFAB.hide();
+        tabLayout.setVisibility(View.GONE);
+
+
+
+        musicPlayerFragment.setArguments(bundle);
+        getFragmentManager().beginTransaction().
+                replace(R.id.fragment_container, musicPlayerFragment).commit();
+
     }
 
     @Override
@@ -457,10 +423,49 @@ public class MainActivity extends AppCompatActivity
                 break;
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
                 if(mediaPlayer.isPlaying()){
+                    mediaPlayer.setVolume(0.5f, 0.5f);
                     pausePlayback();
                     if(musicPlayerFragment.isVisible()){
                         musicPlayerFragment.changePlaybackButtonImage(mediaPlayer.isPlaying());
                     }
+                }
+                break;
+            case AudioManager.AUDIOFOCUS_GAIN:
+                startPlayback();
+                mediaPlayer.setVolume(1.0f, 1.0f);
+                break;
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        switch (tabLayout.getSelectedTabPosition()){
+            case 0:
+                switch (musicRetriever.getArtistStackSize()){
+                    case 1:
+                        break;
+                    case 2:
+                        musicRetriever.popAlbumListFromArtistStack();
+                        musicListFragment.changeContents(
+                                musicRetriever.getArtistsAsStringArray());
+                        break;
+                    case 3:
+                        musicRetriever.popSongListFromArtistStack();
+                        musicListFragment.changeContents(
+                                musicRetriever.getAlbumListAsStringArray(
+                                        musicRetriever.getSelectedArtistAlbums()));
+                        break;
+                }
+                break;
+            case 1:
+                switch (musicRetriever.getAlbumStackSize()){
+                    case 1:
+                        break;
+                    case 2:
+                        musicRetriever.popSongListFromAlbumStack();
+                        musicListFragment.changeContents(
+                                musicRetriever.getAlbumsAsStringArray());
+                        break;
                 }
                 break;
         }
