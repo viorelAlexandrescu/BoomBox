@@ -9,23 +9,19 @@ import android.net.Uri;
  * This class describes a Song :)
  */
 public class Song {
-    private long id, duration;
-    private String artist, title, album;
+    private long songId;
+    private String artist, title, album, albumKey;
 
-    public Song(long newId, String newArtist, String newTitle, String newAlbum, long newDuration){
-        this.id = newId;
+    public Song(long newId, String newArtist, String newTitle, String newAlbum, String newAlbumKey){
+        this.songId = newId;
+        this.albumKey = newAlbumKey;
         this.artist = newArtist;
         this.album = newAlbum;
         this.title = newTitle;
-        this.duration = newDuration;
     }
 
-    public long getId() {
-        return id;
-    }
-
-    public long getDuration() {
-        return duration;
+    public String getSongAlbumKey(){
+        return albumKey;
     }
 
     public String getArtist() {
@@ -42,7 +38,11 @@ public class Song {
 
     public Uri getURI() {
         return ContentUris.withAppendedId(
-                android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id);
+                android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, songId);
+    }
+
+    public void setAlbumKey(String newAlbumKey){
+        albumKey = newAlbumKey;
     }
 
     public static String getTimeInMinutesAndSeconds(int songDuration){

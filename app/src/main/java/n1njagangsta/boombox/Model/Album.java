@@ -11,18 +11,21 @@ import java.util.List;
  */
 
 public class Album {
-    private String title, artist;
-    private long albumId;
+    private String title, artist, albumKey;
     private List<Song> albumSongList;
     private Bitmap albumArt;
 
-    public Album(String newArtist, String newTitle, long newAlbumId,
+    public Album(String newArtist, String newTitle, String newAlbumKey,
                  List<Song> newAlbumSongList, Bitmap newAlbumArt){
         this.title = newTitle;
         this.artist = newArtist;
-        this.albumId = newAlbumId;
+        this.albumKey = newAlbumKey;
         this.albumSongList = newAlbumSongList;
         this.albumArt = newAlbumArt;
+    }
+
+    public String getAlbumKey() {
+        return albumKey;
     }
 
     public String getTitle(){
@@ -31,10 +34,6 @@ public class Album {
 
     public String getArtist(){
         return artist;
-    }
-
-    public long getAlbumId(){
-        return albumId;
     }
 
     public List<Song> getAlbumSongList(){

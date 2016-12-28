@@ -11,13 +11,14 @@
             android:layout_height="0dp"
             android:layout_weight="68"
             android:orientation="vertical"
-            android:padding="32dp"
+            android:padding="16dp"
             android:background="@android:color/white">
 
                 <ImageView
                     android:id="@+id/musicPlayerFragment_albumArt_ImgView"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
+                    android:layout_height="match_parent"
+                    android:elevation="16dp"/>
 
         </LinearLayout>
 

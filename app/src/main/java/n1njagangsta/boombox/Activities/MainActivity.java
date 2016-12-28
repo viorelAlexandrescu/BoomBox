@@ -10,6 +10,7 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -18,6 +19,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import n1njagangsta.boombox.Model.Song;
@@ -30,6 +32,8 @@ public class MainActivity extends AppCompatActivity
         implements MusicListFragment.OnItemSelectedListener,
         MusicPlayerFragment.OnPlayerInteractionListener,
                     AudioManager.OnAudioFocusChangeListener{
+
+    private android.app.FragmentManager fragmentManager;
 
     private TabLayout tabLayout;
 
@@ -53,14 +57,9 @@ public class MainActivity extends AppCompatActivity
         switch (requestCode){
             case PackageManager.PERMISSION_GRANTED:{
                 if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
-                    musicRetriever = new MusicRetriever(this.getContentResolver());
-                    musicRetriever.prepare();
-
-                    mediaPlayer = new MediaPlayer();
-
-                    prepareUI();
-                    prepareListFragment();
+                    initApp();
                 }
+                break;
             }
             // do not start app if you cannot access local data
         }
@@ -76,37 +75,7 @@ public class MainActivity extends AppCompatActivity
                     Manifest.permission.READ_EXTERNAL_STORAGE}, PackageManager.PERMISSION_GRANTED);
         }
 
-        musicRetriever = new MusicRetriever(this.getContentResolver());
-        musicRetriever.prepare();
-
-        mediaPlayer = new MediaPlayer();
-        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mediaPlayer) {
-                quickFAB.setImageResource(R.drawable.ic_play_arrow_white_48dp);
-                if (musicPlayerFragment.isVisible()) {
-                    musicPlayerFragment.changePlaybackButtonImage(false);
-                }
-            }
-        });
-        mediaPlayer.setOnSeekCompleteListener(new MediaPlayer.OnSeekCompleteListener() {
-            @Override
-            public void onSeekComplete(MediaPlayer mediaPlayer) {
-                if (musicPlayerFragment.isVisible()) {
-                    musicPlayerFragment.changePlaybackButtonImage(true);
-                }
-                startPlayback();
-            }
-        });
-
-        audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
-        audioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC,
-                                            AudioManager.AUDIOFOCUS_GAIN);
-
-        prepareUI();
-        prepareListFragment();
-
-        musicPlayerFragment = new MusicPlayerFragment();
+        initApp();
     }
 
     @Override
@@ -120,12 +89,13 @@ public class MainActivity extends AppCompatActivity
         switch (item.getItemId()) {
             case R.id.switch_between_screens:
                 if(musicListFragment.isVisible()){
-                    changeScreenToPlayer();
                     item.setIcon(R.drawable.ic_list_white_48dp);
+                    changeScreenToPlayer();
                     item.setTitle(R.string.action_return_to_music_list);
+
                 } else {
-                    changeScreenToList();
                     item.setIcon(R.drawable.ic_radio_white_48dp);
+                    changeScreenToList();
                     item.setTitle(R.string.action_open_music_player);
                 }
                 break;
@@ -146,24 +116,62 @@ public class MainActivity extends AppCompatActivity
                 break;
             case 2:
                 // songs tab
-                onSongSelect(musicRetriever.getSongs(),index);
+                musicRetriever.setPlaylist(musicRetriever.getSongs());
+                startPlaylist(index);
+        }
+    }
+
+    @Override
+    public boolean isSongSelected() {
+        if(musicRetriever.getCurrentSong() != null){
+            return true;
+        } else {
+            return false;
         }
     }
 
     @Override
     public void onPlaybackClick() {
-        if(mediaPlayer.isPlaying()){
+        boolean isMediaPlaying = mediaPlayer.isPlaying();
+
+        if(isMediaPlaying){
             pausePlayback();
         } else {
             startPlayback();
         }
-        musicPlayerFragment.changePlaybackButtonImage(mediaPlayer.isPlaying());
+
+        musicPlayerFragment.changePlaybackButtonImage(!isMediaPlaying);
+    }
+
+    @Override
+    public void onSkipToPreviousClick() {
+        skipToPreviousSong();
+    }
+
+    @Override
+    public void onSkipToNextClick() {
+        skipToNextSong();
     }
 
     @Override
     public void onSeek(int seekValue) {
         pausePlayback();
         mediaPlayer.seekTo(seekValue);
+    }
+
+    @Override
+    public int getSongPosition() {
+        return mediaPlayer.getCurrentPosition();
+    }
+
+    @Override
+    public int getSongDuration() {
+        return mediaPlayer.getDuration();
+    }
+
+    @Override
+    public boolean isMusicPlaying() {
+        return mediaPlayer.isPlaying();
     }
 
     private void startPlayback(){
@@ -176,18 +184,47 @@ public class MainActivity extends AppCompatActivity
         quickFAB.setImageResource(R.drawable.ic_play_arrow_white_48dp);
     }
 
-    private void prepareListFragment(){
-        Bundle songsData = new Bundle();
-        songsData.putStringArray("songList", musicRetriever.getSongsAsStringArray());
-        songsData.putStringArray("artistList", musicRetriever.getArtistsAsStringArray());
-        songsData.putStringArray("albumList", musicRetriever.getAlbumsAsStringArray());
-        songsData.putInt("currentTabPosition", tabLayout.getSelectedTabPosition());
+    private void skipToPreviousSong(){
+        if(musicRetriever.getPlaylist() != null){
+            int currentSongIndex = musicRetriever.getIndexOfSongInPlaylist(
+                    musicRetriever.getCurrentSong());
+            if(currentSongIndex > 0){
+                onSongSelect(musicRetriever.getPlaylist().get(currentSongIndex - 1));
+            }
+        } else {
+            Toast.makeText(getApplicationContext(), "Null Playlist", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void skipToNextSong(){
+        if(musicRetriever.getPlaylist() != null){
+            int currentSongIndex = musicRetriever.getIndexOfSongInPlaylist(
+                    musicRetriever.getCurrentSong());
+            if(currentSongIndex < musicRetriever.getPlaylistSize() - 1){
+                onSongSelect(musicRetriever.getPlaylist().get(currentSongIndex + 1));
+            }
+        } else {
+            Toast.makeText(getApplicationContext(), "Null Playlist", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void initApp(){
+        musicRetriever = new MusicRetriever(getApplicationContext().getContentResolver());
+        musicRetriever.prepare();
+
+        mediaPlayer = new MediaPlayer();
+
+        audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+        audioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN);
+
+        fragmentManager = getFragmentManager();
 
         musicListFragment = new MusicListFragment();
-        musicListFragment.setArguments(songsData);
+        musicPlayerFragment = new MusicPlayerFragment();
 
-        getFragmentManager().beginTransaction().
-                add(R.id.fragment_container, musicListFragment).commit();
+        prepareUI();
+        changeScreenToList();
     }
 
     private void prepareUI() {
@@ -255,6 +292,22 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
+        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mediaPlayer) {
+                skipToNextSong();
+            }
+        });
+        mediaPlayer.setOnSeekCompleteListener(new MediaPlayer.OnSeekCompleteListener() {
+            @Override
+            public void onSeekComplete(MediaPlayer mediaPlayer) {
+                if (musicPlayerFragment.isVisible()) {
+                    musicPlayerFragment.changePlaybackButtonImage(true);
+                }
+                startPlayback();
+            }
+        });
+
         setSupportActionBar(myToolbar);
     }
 
@@ -273,9 +326,6 @@ public class MainActivity extends AppCompatActivity
                     musicRetriever.pushSongListToArtistStack(
                             musicRetriever.getSelectedArtistAlbums().get(artistItemIndex).getAlbumSongList());
 
-                    musicRetriever.setCurrentSelectedAlbum(
-                            musicRetriever.getSelectedArtistAlbums().get(artistItemIndex));
-
                     musicListFragment.changeContents(
                             musicRetriever.getSongListFromAlbumAsStringArray(
                                     musicRetriever.getSongListOfSelectedAlbumOfSelectedArtist()));
@@ -284,8 +334,9 @@ public class MainActivity extends AppCompatActivity
                 }
                 break;
             case 3:
-                onSongSelect(musicRetriever.getSongListOfSelectedAlbumOfSelectedArtist(),
-                        artistItemIndex);
+                musicRetriever.setPlaylist(
+                        musicRetriever.getSongListOfSelectedAlbumOfSelectedArtist());
+                startPlaylist(artistItemIndex);
                 break;
         }
     }
@@ -297,9 +348,6 @@ public class MainActivity extends AppCompatActivity
                     musicRetriever.pushSongListToAlbumStack(
                             musicRetriever.getAlbums().get(albumItemIndex).getAlbumSongList());
 
-                    musicRetriever.setCurrentSelectedAlbum(
-                            musicRetriever.getAlbums().get(albumItemIndex));
-
                     musicListFragment.changeContents(
                             musicRetriever.getSongListFromAlbumAsStringArray(
                                     musicRetriever.getSongListOfSelectedAlbumOfAlbumList()));
@@ -308,34 +356,53 @@ public class MainActivity extends AppCompatActivity
                 }
                 break;
             case 2:
-                onSongSelect(musicRetriever.getSongListOfSelectedAlbumOfAlbumList(),albumItemIndex);
+                musicRetriever.setPlaylist(
+                        musicRetriever.getSongListOfSelectedAlbumOfAlbumList());
+                startPlaylist(albumItemIndex);
                 break;
         }
     }
 
-    private void onSongSelect(List<Song> songs, int songItemIndex) {
+    private void onSongSelect(Song newSong) {
         if(mediaPlayer.isPlaying()){
             mediaPlayer.stop();
         }
         mediaPlayer.reset();
 
         try {
-            mediaPlayer.setDataSource(getApplicationContext(),
-                    songs.get(songItemIndex).getURI());
+            mediaPlayer.setDataSource(getApplicationContext(), newSong.getURI());
             mediaPlayer.prepare();
-            myToolbar.setTitle(songs.get(songItemIndex).getTitle());
-            myToolbar.setSubtitle(songs.get(songItemIndex).getArtist());
             startPlayback();
+
+            myToolbar.setTitle(newSong.getTitle());
+            myToolbar.setSubtitle(newSong.getArtist());
+
+            musicRetriever.setCurrentSelectedAlbum(
+                    musicRetriever.getAlbumByKey(
+                            newSong.getSongAlbumKey()));
+
+            musicRetriever.setCurrentSong(newSong);
+
+            //this is implicit to when skipping songs as well
+            if(musicPlayerFragment.isVisible()){
+                musicPlayerFragment.setCurrentSongPositionText(0);
+                musicPlayerFragment.setSongDurationTextView(mediaPlayer.getDuration());
+                musicPlayerFragment.changePlaybackButtonImage(true);
+            }
         } catch (IOException ioe){
-            Toast.makeText(MainActivity.this, ioe.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(),
+                    newSong.getTitle() + " does not exist.",
+                    Toast.LENGTH_SHORT).show();
+
+            // here add a method to remove this entry
         }
     }
 
+    private void startPlaylist(int playlistItem){
+        onSongSelect(musicRetriever.getPlaylist().get(playlistItem));
+    }
+
     private void changeScreenToList() {
-            if(musicListFragment.isVisible()){
-                return;
-            }
-            quickFAB.show();
             tabLayout.setVisibility(View.VISIBLE);
 
             String artistsKey = "artistList",
@@ -372,102 +439,85 @@ public class MainActivity extends AppCompatActivity
                     break;
             }
 
-
             bundleData.putInt("currentTabPosition", tabLayout.getSelectedTabPosition());
             musicListFragment.setArguments(bundleData);
 
-            getFragmentManager().beginTransaction().
+            fragmentManager.beginTransaction().
                     replace(R.id.fragment_container, musicListFragment).commit();
+
+        quickFAB.show();
     }
 
     private void changeScreenToPlayer() {
         Bundle bundle = new Bundle();
-        bundle.putBoolean("mediaPlayerStatus", mediaPlayer.isPlaying());
 
-        int songDuration = mediaPlayer.getDuration(),
-                currentPosition = mediaPlayer.getCurrentPosition();
-
-        if (songDuration == -1) {
-            bundle.putInt("songDuration", 0);
-        } else {
-            bundle.putInt("songCurrentPosition", currentPosition);
-            bundle.putInt("songDuration", songDuration);
-        }
         if (musicRetriever.getCurrentSelectedAlbum() != null) {
             musicPlayerFragment.setAlbumArtBitmap(
                     musicRetriever.getCurrentSelectedAlbum().getAlbumArt());
         }
 
-        quickFAB.hide();
         tabLayout.setVisibility(View.GONE);
-
-
+        quickFAB.hide();
 
         musicPlayerFragment.setArguments(bundle);
         getFragmentManager().beginTransaction().
                 replace(R.id.fragment_container, musicPlayerFragment).commit();
-
     }
 
     @Override
     public void onAudioFocusChange(int focusChange) {
         // add more cases if you wish to approach more audio focus cases
-        switch (focusChange){
-            case AudioManager.AUDIOFOCUS_LOSS:
-                if(mediaPlayer.isPlaying()){
-                    pausePlayback();
-                    if(musicPlayerFragment.isVisible()){
-                        musicPlayerFragment.changePlaybackButtonImage(mediaPlayer.isPlaying());
-                    }
+        boolean isMusicPlaying = mediaPlayer.isPlaying();
+
+        if(focusChange == AudioManager.AUDIOFOCUS_LOSS || focusChange ==  AudioManager.AUDIOFOCUS_LOSS_TRANSIENT){
+            if(isMusicPlaying){
+                pausePlayback();
+                if(musicPlayerFragment.isVisible()){
+                    musicPlayerFragment.changePlaybackButtonImage(false);
                 }
-                break;
-            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-                if(mediaPlayer.isPlaying()){
-                    mediaPlayer.setVolume(0.5f, 0.5f);
-                    pausePlayback();
-                    if(musicPlayerFragment.isVisible()){
-                        musicPlayerFragment.changePlaybackButtonImage(mediaPlayer.isPlaying());
-                    }
-                }
-                break;
-            case AudioManager.AUDIOFOCUS_GAIN:
-                startPlayback();
-                mediaPlayer.setVolume(1.0f, 1.0f);
-                break;
+            }
+        } else {
+            switch (focusChange){
+                case AudioManager.AUDIOFOCUS_GAIN:
+                    // TODO find a way to make audio start only when wanted, When player is paused, during phone call also make the app not start playback if the player is paused and later the app receives audio focus
+                    break;
+            }
         }
     }
 
     @Override
     public void onBackPressed() {
-        switch (tabLayout.getSelectedTabPosition()){
-            case 0:
-                switch (musicRetriever.getArtistStackSize()){
-                    case 1:
-                        break;
-                    case 2:
-                        musicRetriever.popAlbumListFromArtistStack();
-                        musicListFragment.changeContents(
-                                musicRetriever.getArtistsAsStringArray());
-                        break;
-                    case 3:
-                        musicRetriever.popSongListFromArtistStack();
-                        musicListFragment.changeContents(
-                                musicRetriever.getAlbumListAsStringArray(
-                                        musicRetriever.getSelectedArtistAlbums()));
-                        break;
-                }
-                break;
-            case 1:
-                switch (musicRetriever.getAlbumStackSize()){
-                    case 1:
-                        break;
-                    case 2:
-                        musicRetriever.popSongListFromAlbumStack();
-                        musicListFragment.changeContents(
-                                musicRetriever.getAlbumsAsStringArray());
-                        break;
-                }
-                break;
+        if(musicListFragment.isVisible()){
+            switch (tabLayout.getSelectedTabPosition()){
+                case 0:
+                    switch (musicRetriever.getArtistStackSize()){
+                        case 1:
+                            break;
+                        case 2:
+                            musicRetriever.popAlbumListFromArtistStack();
+                            musicListFragment.changeContents(
+                                    musicRetriever.getArtistsAsStringArray());
+                            break;
+                        case 3:
+                            musicRetriever.popSongListFromArtistStack();
+                            musicListFragment.changeContents(
+                                    musicRetriever.getAlbumListAsStringArray(
+                                            musicRetriever.getSelectedArtistAlbums()));
+                            break;
+                    }
+                    break;
+                case 1:
+                    switch (musicRetriever.getAlbumStackSize()){
+                        case 1:
+                            break;
+                        case 2:
+                            musicRetriever.popSongListFromAlbumStack();
+                            musicListFragment.changeContents(
+                                    musicRetriever.getAlbumsAsStringArray());
+                            break;
+                    }
+                    break;
+            }
         }
     }
 }
