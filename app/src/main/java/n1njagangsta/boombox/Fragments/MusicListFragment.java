@@ -1,35 +1,36 @@
 package n1njagangsta.boombox.Fragments;
 
-
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.design.widget.FloatingActionButton;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import n1njagangsta.boombox.Model.MediaPlayerInteraction;
 import n1njagangsta.boombox.R;
-
 
 public class MusicListFragment extends Fragment implements AdapterView.OnItemClickListener{
     private ListView elementsList;
     private ArrayAdapter<String> stringArrayAdapter;
     private OnItemSelectedListener mCallback;
+    private MediaPlayerInteraction mediaPlayerInteraction;
+    private FloatingActionButton quickFAB;
 
     public MusicListFragment(){
     }
 
     public interface OnItemSelectedListener{
-        void OnListItemPicked(int index);
+        void onListItemPicked(int index);
     }
 
     @Override
@@ -39,6 +40,7 @@ public class MusicListFragment extends Fragment implements AdapterView.OnItemCli
         Activity activity = (Activity) context;
         try{
             mCallback = (OnItemSelectedListener) activity;
+            mediaPlayerInteraction = (MediaPlayerInteraction) activity;
         } catch (ClassCastException cce){
             throw new ClassCastException(activity.toString() +
                     " must implement OnItemSelectedListener");
@@ -48,40 +50,18 @@ public class MusicListFragment extends Fragment implements AdapterView.OnItemCli
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        String[] itemsAsStringArray;
 
-        String[] songs = getArguments().getStringArray("songList"),
-                 artists = getArguments().getStringArray("artistList"),
-                 albums = getArguments().getStringArray("albumList");
+        if((itemsAsStringArray = getArguments().getStringArray("currentList")) != null){
+            ArrayList<String> items = new ArrayList<>(Arrays.asList(itemsAsStringArray));
 
-        int currentTabPosition = getArguments().getInt("currentTabPosition");
-
-        ArrayList<String> items = new ArrayList<>();
-        switch (currentTabPosition){
-            case 0:
-                if(artists != null){
-                    items.addAll(Arrays.asList(artists));
-                } else {
-                    Toast.makeText(getContext(), "Artist list empty on list initialization", Toast.LENGTH_SHORT).show();
-                }
-                break;
-            case 1:
-                if(albums != null){
-                    items.addAll(Arrays.asList(albums));
-                }else {
-                    Toast.makeText(getContext(), "Album list empty on list initialization", Toast.LENGTH_SHORT).show();
-                }
-                break;
-            case 2:
-                if(songs != null){
-                    items.addAll(Arrays.asList(songs));
-                } else {
-                    Toast.makeText(getContext(), "Song list empty on list initialization", Toast.LENGTH_LONG).show();
-                }
-                break;
+            stringArrayAdapter = new ArrayAdapter<>(getActivity().
+                    getApplicationContext(), R.layout.simple_listview_item, items);
+            stringArrayAdapter.setNotifyOnChange(true);
+        } else {
+            throw new NullPointerException("Null Items List");
         }
 
-        stringArrayAdapter = new ArrayAdapter<String>(getContext(), R.layout.simple_listview_item, items);
-        stringArrayAdapter.setNotifyOnChange(true);
     }
 
     @Nullable
@@ -90,14 +70,34 @@ public class MusicListFragment extends Fragment implements AdapterView.OnItemCli
 
         View rootView = inflater.inflate(R.layout.fragment_music_list,container,false);
         elementsList = (ListView) rootView.findViewById(R.id.listview_items);
-        elementsList.setAdapter(stringArrayAdapter);
-        elementsList.setOnItemClickListener(this);
+        quickFAB = (FloatingActionButton) rootView.findViewById(R.id.quickPlayFAB);
+
         return rootView;
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+        elementsList.setAdapter(stringArrayAdapter);
+        changeFABImage(getArguments().getBoolean("isMusicPlaying"));
+    }
+
+    @Override
+    public void onViewCreated(View view, Bundle savedInstanceState)  {
+        super.onViewCreated(view, savedInstanceState);
+        elementsList.setOnItemClickListener(this);
+        quickFAB.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mediaPlayerInteraction.onPlaybackClick();
+                changeFABImage(mediaPlayerInteraction.isMusicPlaying());
+            }
+        });
+    }
+
+    @Override
     public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-        mCallback.OnListItemPicked(i);
+        mCallback.onListItemPicked(i);
     }
 
     public void changeContents(String[] newData){
@@ -108,4 +108,19 @@ public class MusicListFragment extends Fragment implements AdapterView.OnItemCli
         }
     }
 
+    public void changeFABImage(boolean isMusicPlaying){
+        if(isMusicPlaying){
+            quickFAB.setImageResource(R.drawable.ic_pause_white_48dp);
+        } else {
+            quickFAB.setImageResource(R.drawable.ic_play_arrow_white_48dp);
+        }
+    }
+
+    public void changeFABVisibility(boolean showOrNot){
+        if(showOrNot == true){
+            quickFAB.show();
+        } else {
+            quickFAB.hide();
+        }
+    }
 }

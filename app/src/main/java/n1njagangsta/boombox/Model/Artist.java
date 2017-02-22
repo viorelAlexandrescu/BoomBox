@@ -1,6 +1,6 @@
 package n1njagangsta.boombox.Model;
 
-import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Created by viorel on 28.09.2016.
@@ -9,18 +9,18 @@ import java.util.List;
 
 public class Artist {
     private String artistName;
-    private List<Album> albumList;
+    private ArrayList<Album> albumList;
 
-    public Artist(String newArtistName, List<Album> newAlbums) {
+    public Artist(String newArtistName, ArrayList<Album> newAlbums) {
         this.artistName = newArtistName;
         this.albumList = newAlbums;
     }
 
-    public List<Album> getAlbumList() {
-        return albumList;
+    public String getArtistName() {
+        return this.artistName;
     }
 
-    public String getArtistName() {
-        return artistName;
+    public ArrayList<Album> getAlbumList() {
+        return this.albumList;
     }
 }

@@ -16,12 +16,15 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import n1njagangsta.boombox.Model.MediaPlayerInteraction;
 import n1njagangsta.boombox.Model.Song;
 import n1njagangsta.boombox.R;
 
-public class MusicPlayerFragment extends Fragment {
+public class MusicPlayerFragment extends Fragment implements SeekBar.OnSeekBarChangeListener {
 
-    private OnPlayerInteractionListener mCallback;
+    private OnPlayerViewInteractionListener mCallback;
+
+    private MediaPlayerInteraction mediaPlayerInteraction;
 
     private ImageButton playbackButton, skipToPreviousButton, skipToNextButton;
 
@@ -41,10 +44,7 @@ public class MusicPlayerFragment extends Fragment {
 
     private boolean isMusicPlaying;
 
-    private Object seekingThreadLock = new Object();
-
-    public interface OnPlayerInteractionListener {
-        void onPlaybackClick();
+    public interface OnPlayerViewInteractionListener {
 
         void onSkipToPreviousClick();
 
@@ -57,8 +57,6 @@ public class MusicPlayerFragment extends Fragment {
         int getSongDuration();
 
         boolean isMusicPlaying();
-
-        boolean isSongSelected();
     }
 
     public MusicPlayerFragment() {
@@ -70,7 +68,8 @@ public class MusicPlayerFragment extends Fragment {
 
         Activity activity = (Activity) context;
         try {
-            mCallback = (OnPlayerInteractionListener) activity;
+            mCallback = (OnPlayerViewInteractionListener) activity;
+            mediaPlayerInteraction = (MediaPlayerInteraction) activity;
         } catch (ClassCastException cce) {
             throw new ClassCastException(activity.toString() +
                     " must implement OnPlayerInteractionListener");
@@ -81,20 +80,22 @@ public class MusicPlayerFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if ((songDuration = mCallback.getSongDuration()) < 0) {
+        if ((songDuration = getArguments().getInt("currentSongDuration")) < 0) {
             songDuration = 0;
         }
 
-        if ((songCurrentPosition = mCallback.getSongPosition()) < 0) {
+        if ((songCurrentPosition= getArguments().getInt("currentSongPosition")) < 0) {
             songCurrentPosition = 0;
         }
+
+        isMusicPlaying = getArguments().getBoolean("isMusicPlaying");
 
         uiSeekingTask = new Runnable() {
             @Override
             public void run() {
                 int playBackTime = mCallback.getSongPosition();
-                setSeekBarPosition(playBackTime);
-                setCurrentSongPositionText(playBackTime);
+                seekBar.setProgress(playBackTime);
+                songCurrentPositionTextView.setText(Song.getTimeInMinutesAndSeconds(playBackTime));
             }
         };
 
@@ -127,50 +128,13 @@ public class MusicPlayerFragment extends Fragment {
             seekBar.setMax(songDuration);
             seekBar.setProgress(songCurrentPosition);
         }
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int value, boolean isSeekFromUser) {
-                if (isSeekFromUser) {
-                    mCallback.onSeek(value);
-                }
-            }
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                songCurrentPositionTextView.setText(
-                        Song.getTimeInMinutesAndSeconds(seekBar.getProgress()));
-            }
-        });
 
         playbackButton = (ImageButton) rootView.findViewById(R.id.play_pause_btn);
-        changePlaybackButtonImage(mCallback.isMusicPlaying());
-        playbackButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mCallback.onPlaybackClick();
-            }
-        });
+        changePlaybackButtonImage(isMusicPlaying);
 
         skipToPreviousButton = (ImageButton) rootView.findViewById(R.id.skip_to_previous_btn);
-        skipToPreviousButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mCallback.onSkipToPreviousClick();
-            }
-        });
-
         skipToNextButton = (ImageButton) rootView.findViewById(R.id.skip_to_next_btn);
-        skipToNextButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mCallback.onSkipToNextClick();
-            }
-        });
 
         songDurationTextView = (TextView) rootView.findViewById(R.id.songDurationTV);
         songDurationTextView.setText(Song.getTimeInMinutesAndSeconds(songDuration));
@@ -210,13 +174,33 @@ public class MusicPlayerFragment extends Fragment {
 //        }
 //    }
 
-    private Thread getInstanceOfSeekingThread(){
-        if (seekingThread == null){
-            System.out.println("Thread is null. Creating new instance");
-            seekingThread = new Thread(seekingTask, "Seeking Thread");
-        }
-        System.out.println("Returning thread singleton instance");
-        return seekingThread;
+    @Override
+    public void onViewCreated(View view, Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        skipToPreviousButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mCallback.onSkipToPreviousClick();
+            }
+        });
+
+        playbackButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mediaPlayerInteraction.onPlaybackClick();
+                changePlaybackButtonImage(mediaPlayerInteraction.isMusicPlaying());
+            }
+        });
+
+        skipToNextButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mCallback.onSkipToNextClick();
+            }
+        });
+
+        seekBar.setOnSeekBarChangeListener(this);
+
     }
 
     public void changePlaybackButtonImage(boolean isMusicPlaying) {
@@ -227,20 +211,45 @@ public class MusicPlayerFragment extends Fragment {
         }
     }
 
+    public void resetPlayerInfo(){
+        seekBar.setMax(mCallback.getSongDuration());//set seek bar max value
+        //reset current position text view value
+        songCurrentPositionTextView.setText(Song.getTimeInMinutesAndSeconds(0));
+        seekBar.setProgress(0);// reset seek bar cursor position
+        //reset song duration text view value
+        songDurationTextView.setText(
+                Song.getTimeInMinutesAndSeconds(mCallback.getSongDuration()));
+    }
+
     public void setAlbumArtBitmap(Bitmap newAlbumArtBitmap) {
         this.albumArtBitmap = newAlbumArtBitmap;
     }
 
-    public void setCurrentSongPositionText(int newTimeValue) {
-        songCurrentPositionTextView.setText(Song.getTimeInMinutesAndSeconds(newTimeValue));
+    @Override
+    public void onProgressChanged(SeekBar seekBar, int value, boolean isSeekFromUser) {
+        if (isSeekFromUser) {
+            mCallback.onSeek(value);
+        }
     }
 
-    public void setSongDurationTextView(int newSongDuration) {
-        songDurationTextView.setText(Song.getTimeInMinutesAndSeconds(newSongDuration));
+    @Override
+    public void onStartTrackingTouch(SeekBar seekBar) {
+    // not setting text here due to possible performance issues and memory leaks
     }
 
-    private void setSeekBarPosition(int newPosition) {
-        seekBar.setProgress(newPosition);
+    @Override
+    public void onStopTrackingTouch(SeekBar seekBar) {
+        songCurrentPositionTextView.setText(
+                Song.getTimeInMinutesAndSeconds(seekBar.getProgress()));
+    }
+
+    private Thread getInstanceOfSeekingThread(){
+        if (seekingThread == null){
+            System.out.println("Thread is null. Creating new instance");
+            seekingThread = new Thread(seekingTask, "Seeking Thread");
+        }
+        System.out.println("Returning thread singleton instance");
+        return seekingThread;
     }
 }
 

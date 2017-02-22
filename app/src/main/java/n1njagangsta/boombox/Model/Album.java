@@ -3,7 +3,7 @@ package n1njagangsta.boombox.Model;
 import android.graphics.Bitmap;
 import android.support.annotation.Nullable;
 
-import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Created by viorel on 19.09.2016.
@@ -11,36 +11,39 @@ import java.util.List;
  */
 
 public class Album {
-    private String title, artist, albumKey;
-    private List<Song> albumSongList;
+    private String title, artist;
+    private ArrayList<Song> albumSongList;
     private Bitmap albumArt;
 
-    public Album(String newArtist, String newTitle, String newAlbumKey,
-                 List<Song> newAlbumSongList, Bitmap newAlbumArt){
+    public Album(String newTitle, String newArtist, ArrayList<Song> newAlbumSongList){
         this.title = newTitle;
-        this.artist = newArtist;
-        this.albumKey = newAlbumKey;
+        this.artist = newArtist;;
+        this.albumSongList = newAlbumSongList;
+    }
+
+    public Album(String newTitle, String newArtist, ArrayList<Song> newAlbumSongList, Bitmap newAlbumArt){
+        this.title = newTitle;
+        this.artist = newArtist;;
         this.albumSongList = newAlbumSongList;
         this.albumArt = newAlbumArt;
     }
 
-    public String getAlbumKey() {
-        return albumKey;
+    public String getAlbumTitle(){
+        return this.title;
     }
 
-    public String getTitle(){
-        return title;
+    public String getArtistName(){
+        return this.artist;
     }
 
-    public String getArtist(){
-        return artist;
+    public ArrayList<Song> getAlbumSongList(){
+        return this.albumSongList;
     }
 
-    public List<Song> getAlbumSongList(){
-        return albumSongList;
+    public void setAlbumArt(Bitmap newAlbumArt){
+        this.albumArt = newAlbumArt;
     }
 
-    @Nullable
     public Bitmap getAlbumArt(){
         return albumArt;
     }
