@@ -2,8 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="n1njagangsta.boombox">
 
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.MEDIA_CONTENT_CONTROL" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+
 
     <!--
         TODO insert this for internet use
@@ -29,7 +33,7 @@
         </activity>
 
         <service
-            android:name=".Services.MusicService"
+            android:name=".Services.PlaybackService"
             android:enabled="true"
             android:exported="false"
             android:isolatedProcess="true"

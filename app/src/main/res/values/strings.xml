@@ -9,4 +9,8 @@
     <string name="action_return_to_music_list">Return To List</string>
     <string name="action_open_music_player">Open Music Player</string>
     <string name="service_description">This is the official BoomBox playback service ;)</string>
+
+    <string name="Intent_New_Playlist_Key">New Playlist</string>
+    <string name="Intent_New_Song_Index_Key">New Song Index</string>
+    <string name="Intent_Seek_To_Integer_Value">Seek To Value</string>
 </resources>

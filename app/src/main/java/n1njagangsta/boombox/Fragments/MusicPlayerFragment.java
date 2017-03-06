@@ -52,11 +52,7 @@ public class MusicPlayerFragment extends Fragment implements SeekBar.OnSeekBarCh
 
         void onSeek(int seekValue);
 
-        int getSongPosition();
-
         int getSongDuration();
-
-        boolean isMusicPlaying();
     }
 
     public MusicPlayerFragment() {
@@ -79,39 +75,7 @@ public class MusicPlayerFragment extends Fragment implements SeekBar.OnSeekBarCh
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        if ((songDuration = getArguments().getInt("currentSongDuration")) < 0) {
-            songDuration = 0;
-        }
-
-        if ((songCurrentPosition= getArguments().getInt("currentSongPosition")) < 0) {
-            songCurrentPosition = 0;
-        }
-
-        isMusicPlaying = getArguments().getBoolean("isMusicPlaying");
-
-        uiSeekingTask = new Runnable() {
-            @Override
-            public void run() {
-                int playBackTime = mCallback.getSongPosition();
-                seekBar.setProgress(playBackTime);
-                songCurrentPositionTextView.setText(Song.getTimeInMinutesAndSeconds(playBackTime));
-            }
-        };
-
-        seekingTask = new Runnable() {
-            @Override
-            public void run() {
-                    isMusicPlaying = mCallback.isMusicPlaying();
-                    if(isMusicPlaying){
-//                        renderSeeking();
-                    } else {
-//                        waitForMusicOrVisibility();
-                    }
-                Thread.yield();
-                System.out.println("seeking thread yielded");
-            }
-        };
+        //todo here place callback results from main activity for song position and playback status
     }
 
     @Nullable

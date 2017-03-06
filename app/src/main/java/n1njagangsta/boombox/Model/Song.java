@@ -1,22 +1,71 @@
 package n1njagangsta.boombox.Model;
 
 import android.net.Uri;
+import android.os.Parcel;
+import android.os.Parcelable;
 
 /**
  * Created by viorel on 16.08.2016.
  *
  * This class describes a Song :)
  */
-public class Song {
+public class Song implements Parcelable{
     private String artist, title, album;
-    private Uri uri;
-    private long duration;
+    private int duration;
+    private Uri songUri;
 
-    public Song(String newTitle, String newArtist, String newAlbum, long newDuration){
+    public Song(String newTitle, String newArtist, String newAlbum, int newDuration){
         this.title = newTitle;
         this.artist = newArtist;
         this.album = newAlbum;
         this.duration = newDuration;
+    }
+
+    public Song(String newTitle, String newArtist, String newAlbum, int newDuration, Uri newSongUri){
+        this.title = newTitle;
+        this.artist = newArtist;
+        this.album = newAlbum;
+        this.duration = newDuration;
+        this.songUri = newSongUri;
+    }
+
+    public static final Parcelable.Creator<Song> CREATOR
+            = new Parcelable.Creator<Song>() {
+        public Song createFromParcel(Parcel in) {
+            return new Song(in);
+        }
+
+        public Song[] newArray(int size) {
+            return new Song[size];
+        }
+    };
+
+    private Song(Parcel sourceParcel) {
+        // restoring song data when reading from parcel in this order
+        this.title = sourceParcel.readString();
+        this.artist = sourceParcel.readString();
+        this.album = sourceParcel.readString();
+        this.duration = sourceParcel.readInt();
+        this.songUri = Uri.parse(sourceParcel.readString());
+    }
+
+    @Override
+    public int describeContents() {
+        /* there is no predefined integer value for
+            describing the contents of this object if
+            it does not contain a file descriptor
+        */
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel destParcel, int flags) {
+        // when writing data to a parcel, we place the data in this order
+        destParcel.writeString(this.title);
+        destParcel.writeString(this.artist);
+        destParcel.writeString(this.album);
+        destParcel.writeInt(this.duration);
+        destParcel.writeString(this.songUri.toString());
     }
 
     public String getSongTitle() {
@@ -31,29 +80,32 @@ public class Song {
         return this.album;
     }
 
-    public long getDuration() {
+    public int getDuration() {
         return this.duration;
     }
 
-    public Uri getURI() {
-        return this.uri;
+    public Uri getUri(){
+        return this.songUri;
     }
 
-    public void setURI(Uri newUri){
-        this.uri = newUri;
+    public void setUri(String url){
+        this.songUri = Uri.parse(url);
     }
 
-    public static String getTimeInMinutesAndSeconds(int songDuration){
-        if(songDuration == 0) return "0:00";
+    public void setUri(Uri newUri){
+        this.songUri = newUri;
+    }
+
+    public static String getTimeInMinutesAndSeconds(int duration){
+        if(duration == 0) return "0:00";
         else {
-            int minutes = (songDuration/1000)/60,
-                 seconds = (songDuration/1000)%60;
+            int minutes = (duration/1000)/60,
+                    seconds = (duration/1000)%60;
             if(seconds >= 10){
                 return minutes + ":" + seconds;
             } else {
-                String doubleDigitSeconds = "0" + seconds;
-
-                return minutes + ":" + doubleDigitSeconds;
+                //double digit seconds
+                return minutes + ":" + "0" + seconds;
             }
         }
     }

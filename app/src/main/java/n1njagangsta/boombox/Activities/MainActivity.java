@@ -5,12 +5,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.media.AudioManager;
-import android.media.MediaPlayer;
 import android.os.Bundle;
-import android.os.PowerManager;
 import android.support.annotation.NonNull;
-import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -20,8 +16,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
+import android.app.FragmentManager;
 
-import java.io.IOException;
 import java.util.ArrayList;
 
 import n1njagangsta.boombox.Model.MediaPlayerInteraction;
@@ -29,30 +25,22 @@ import n1njagangsta.boombox.Model.Song;
 import n1njagangsta.boombox.Fragments.MusicListFragment;
 import n1njagangsta.boombox.Fragments.MusicPlayerFragment;
 import n1njagangsta.boombox.MusicRetriever;
+import n1njagangsta.boombox.PrepareMusicRetrieverTask;
 import n1njagangsta.boombox.R;
+import n1njagangsta.boombox.Services.PlaybackService;
 
 public class MainActivity extends AppCompatActivity
         implements MusicListFragment.OnItemSelectedListener,
         MusicPlayerFragment.OnPlayerViewInteractionListener,
-        MediaPlayerInteraction {
+        PrepareMusicRetrieverTask.MusicRetrieverPreparedListener{
 
-    private android.app.FragmentManager fragmentManager;
-
-    private TabLayout tabLayout;
-
-    private Toolbar myToolbar;
-
-    private MusicListFragment musicListFragment;
-
-    private MusicPlayerFragment musicPlayerFragment;
-
-    private MusicRetriever musicRetriever;
-
-    private AudioManager audioManager;
-
-    private AudioManager.OnAudioFocusChangeListener audioFocusChangeListener;
-
-    private MediaPlayer mediaPlayer;
+    FragmentManager fragmentManager;
+    TabLayout tabLayout;
+    Toolbar myToolbar;
+    MusicListFragment musicListFragment;
+    MusicPlayerFragment musicPlayerFragment;
+    MusicRetriever mRetriever;
+    BroadcastReceiver mBroadcastReceiver;
 
     //todo when headphones come out, pause playback
 
@@ -109,207 +97,213 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
+    public void onBackPressed() {
+        if (musicListFragment.isVisible()) {
+            switch (tabLayout.getSelectedTabPosition()) {
+                case 0:
+                    switch (mRetriever.getArtistStackSize()) {
+                        case 2:
+                            // 2 pops makes the stack have only artists
+                            mRetriever.popArtistStack();
+                            musicListFragment.changeContents(
+                                    mRetriever.getArtistListAsStringArray());
+                            break;
+                        case 3:
+                            // 1 pop make the stack have only artists and selected artist album
+                            mRetriever.popArtistStack();
+                            musicListFragment.changeContents(
+                                    mRetriever.getAlbumListAsStringArray(
+                                            mRetriever.getSelectedArtistAlbums()));
+                            break;
+                    }
+                    break;
+                case 1:
+                    switch (mRetriever.getAlbumStackSize()) {
+                        case 2:
+                            mRetriever.popSongListFromAlbumStack();
+                            musicListFragment.changeContents(
+                                    mRetriever.getAlbumListAsStringArray(
+                                            mRetriever.getAlbums()));
+                            break;
+                    }
+                    break;
+            }
+        }
+    }
+
+    /**
+     * Sets a new playlist and start a new song from the playlist with respect at the given index.
+     * Selecting a song from an album already set as a playlist shall only pass the new song's index
+     * <p>
+     * <p>
+     * By default this method shall update the list with a new array of strings
+     * representing either an album list or a song list.
+     *
+     * @param listItemIndex is the selected list item index
+     */
+    @Override
     public void onListItemPicked(int listItemIndex) {
-        ArrayList<Song> newSongList = null;
+        // newSongList is the selected playlist
+        ArrayList<Song> newSongList = null,
+                currentPlaylist = mRetriever.getPlaylist();
         switch (tabLayout.getSelectedTabPosition()) {
             //  artists tab
             case 0:
-                switch (musicRetriever.getArtistStackSize()) {
+                switch (mRetriever.getArtistStackSize()) {
                     // user selected an artist
                     case 1:
-                        musicRetriever.pushAlbumListToArtistStack(
-                                musicRetriever.getArtists().get(listItemIndex).getAlbumList());
-
+                        // push to the artist stack the selected artist album
+                        mRetriever.pushAlbumListToArtistStack(
+                                mRetriever.getArtists().get(listItemIndex).getAlbumList());
+                        // change the list contents with the new album
                         musicListFragment.changeContents(
-                                musicRetriever.getAlbumListAsStringArray(
-                                        musicRetriever.getSelectedArtistAlbums()));
+                                mRetriever.getAlbumListAsStringArray(
+                                        mRetriever.getSelectedArtistAlbums()));
                         break;
                     case 2:
-                        // user selected an album from the selected artist
-                        musicRetriever.pushSongListToArtistStack(
-                                musicRetriever.getSelectedArtistAlbums().
+                        // user selected an album of the selected artist
+                        mRetriever.pushSongListToArtistStack(
+                                mRetriever.getSelectedArtistAlbums().
                                         get(listItemIndex).getAlbumSongList());
 
                         musicListFragment.changeContents(
-                                musicRetriever.getSongListAsStringArray(
-                                        musicRetriever.getSongListOfSelectedAlbumOfSelectedArtist()));
+                                mRetriever.getSongListAsStringArray(
+                                        mRetriever.getSongListOfSelectedAlbumOfSelectedArtist()));
                         break;
                     case 3:
                         // user selected a song from previously selected album
-                        newSongList = musicRetriever.getSongListOfSelectedAlbumOfSelectedArtist();
+                        newSongList = mRetriever.getSongListOfSelectedAlbumOfSelectedArtist();
                         break;
                 }
                 break;
 
             //  albums tab
             case 1:
-                switch (musicRetriever.getAlbumStackSize()) {
+                switch (mRetriever.getAlbumStackSize()) {
                     case 1:
-                        musicRetriever.pushSongListToAlbumStack(
-                                musicRetriever.getAlbums().get(listItemIndex).getAlbumSongList());
+                        mRetriever.pushSongListToAlbumStack(
+                                mRetriever.getAlbums().get(listItemIndex).getAlbumSongList());
 
                         musicListFragment.changeContents(
-                                musicRetriever.getSongListAsStringArray(
-                                        musicRetriever.getSongListOfSelectedAlbumOfAlbumList()));
+                                mRetriever.getSongListAsStringArray(
+                                        mRetriever.getSongListOfSelectedAlbumOfAlbumList()));
                         break;
                     case 2:
-                        newSongList = musicRetriever.getSongListOfSelectedAlbumOfAlbumList();
+                        newSongList = mRetriever.getSongListOfSelectedAlbumOfAlbumList();
                         break;
                 }
                 break;
 
             // songs tab
-            case 2:
-                newSongList = musicRetriever.getSongs();
+            default:
+                newSongList = mRetriever.getSongs();
                 break;
         }
-        if(newSongList != null){
-            setPlaylistAndStartPlaybackFromIndex(newSongList ,listItemIndex);
-        }
-    }
 
-    private void setPlaylistAndStartPlaybackFromIndex(ArrayList<Song> newPlaylist, int index) {
-        musicRetriever.setPlaylist(newPlaylist);
-        musicRetriever.setCurrentSongIndex(index);
-        onSongSelect(newPlaylist.get(index));
-    }
+        mRetriever.setCurrentSongIndex(listItemIndex);
+        if (currentPlaylist == null || !currentPlaylist.equals(newSongList)){
+            mRetriever.setPlaylist(newSongList);
+        } else newSongList = null;
 
-    @Override
-    public void onPlaybackClick() {
-        if (mediaPlayer.isPlaying())
-            mediaPlayer.pause();
-        else
-            mediaPlayer.start();
-
+        onSongSelect(newSongList, listItemIndex);
     }
 
     @Override
     public void onSkipToPreviousClick() {
-        if (musicRetriever.getPlaylist() != null) {
-            int currentSongIndex = musicRetriever.getCurrentSongIndex();
-            if (currentSongIndex > 0) {
-                musicRetriever.setCurrentSongIndex(--currentSongIndex);
-                onSongSelect(musicRetriever.getPlaylist().get(currentSongIndex));
-                musicPlayerFragment.resetPlayerInfo();
-            } else {
-                Toast.makeText(getApplicationContext(), "It's song #1", Toast.LENGTH_SHORT).show();
-            }
-        } else {
-            Toast.makeText(getApplicationContext(), "Null Playlist", Toast.LENGTH_SHORT).show();
-        }
+        Intent skipToPreviousIntent = new Intent(PlaybackService.ACTION_PLAY_PREVIOUS_SONG);
+        startService(skipToPreviousIntent);
     }
 
     @Override
     public void onSkipToNextClick() {
-        if (musicRetriever.getPlaylist() != null) {
-            int currentSongIndex = musicRetriever.getCurrentSongIndex();
-            if (currentSongIndex < musicRetriever.getPlaylistSize() - 1) {
-                musicRetriever.setCurrentSongIndex(++currentSongIndex);
-                onSongSelect(musicRetriever.getPlaylist().get(currentSongIndex));
-                musicPlayerFragment.resetPlayerInfo();
-            } else
-                Toast.makeText(getApplicationContext(), "End of playlist", Toast.LENGTH_SHORT).show();
-        } else
-            Toast.makeText(getApplicationContext(), "Null Playlist", Toast.LENGTH_SHORT).show();
-
+        Intent skipToNextIntent = new Intent(PlaybackService.ACTION_PLAY_NEXT_SONG);
+        startService(skipToNextIntent);
     }
 
     @Override
     public void onSeek(int seekValue) {
-        mediaPlayer.pause();
-        mediaPlayer.seekTo(seekValue);
-    }
-
-    @Override
-    public int getSongPosition() {
-        return mediaPlayer.getCurrentPosition();
+        Intent seekIntent = new Intent(PlaybackService.ACTION_SEEK_TO);
+        seekIntent.putExtra(String.valueOf(R.string.Intent_Seek_To_Integer_Value),seekValue);
+        startService(seekIntent);
     }
 
     @Override
     public int getSongDuration() {
-        return musicRetriever.getCurrentSong() != null ?
-                (int) musicRetriever.getCurrentSong().getDuration() : 0;
+        return mRetriever.getPlaylist().get(mRetriever.getCurrentSongIndex()).getDuration();
     }
 
-    @Override
-    public boolean isMusicPlaying() {
-        return mediaPlayer.isPlaying();
-    }
+    /**
+     * Start playback of selected song.
+     * <p>
+     * By default, we send current song data and the album of which it belongs to, but the
+     * method checks if the album from which the song has been previously selected,
+     * if so, just send the index at which new song is at.
+     */
+    private void onSongSelect(ArrayList<Song> newSongList, int newSongIndex) {
 
-    private void onSongSelect(Song newSong) {
-        if (mediaPlayer.isPlaying()) {
-            mediaPlayer.stop();
+        Intent playbackIntent = new Intent(PlaybackService.ACTION_START_PLAYBACK);
+
+        if (newSongList != null) {
+            playbackIntent.putParcelableArrayListExtra(String.valueOf(R.string.Intent_New_Playlist_Key), newSongList);
         }
-        mediaPlayer.reset();
+        playbackIntent.putExtra(String.valueOf(R.string.Intent_New_Song_Index_Key), newSongIndex);
 
-        try {
-            mediaPlayer.setDataSource(getApplicationContext(), newSong.getURI());
-            mediaPlayer.prepare();
-            mediaPlayer.start();
+        startService(playbackIntent);
+        myToolbar.setTitle(mRetriever.getPlaylist().get(newSongIndex).getSongTitle());
+        myToolbar.setSubtitle(mRetriever.getPlaylist().get(newSongIndex).getArtistName());
 
-            myToolbar.setTitle(newSong.getSongTitle());
-            myToolbar.setSubtitle(newSong.getArtistName());
-
-
-            if (musicListFragment.isVisible()) {
-                musicListFragment.changeFABImage(true);
-            } else {
-                //this is implicit to when skipping songs as well
-                musicPlayerFragment.changePlaybackButtonImage(true);
-            }
-
-
-        } catch (IOException ioe) {
-            Toast.makeText(getApplicationContext(),
-                    newSong.getSongTitle() + " does not exist.",
-                    Toast.LENGTH_SHORT).show();
-            // here add a method to remove this entry
+        if (musicListFragment.isVisible()) {
+            musicListFragment.changeFABImage(true);
+        } else {
+            //this is implicit to when skipping songs as well
+            musicPlayerFragment.changePlaybackButtonImage(true);
         }
     }
 
+    /**
+     * This method passes the media player status so it may change FAB image
+     * And the current list of items
+     */
     private void changeScreenToList() {
         Bundle bundleData = new Bundle();
 
-        String currentListKey = "currentList",
-                playerStatusKey = "isMusicPlaying";
-        String[] itemListValues;
+        String currentListKey = "currentList", itemListValues[];
 
         switch (tabLayout.getSelectedTabPosition()) {
             case 0:
                 // user may have selected only an artist or not
-                if (musicRetriever.getArtistStackSize() < 3) {
-                    if (musicRetriever.getArtistStackSize() == 2) {
+                if (mRetriever.getArtistStackSize() < 3) {
+                    if (mRetriever.getArtistStackSize() == 2) {
                         // user has only selected an artist and is viewing it's album list
-                        itemListValues = musicRetriever.getAlbumListAsStringArray(
-                                musicRetriever.getSelectedArtistAlbums());
+                        itemListValues = mRetriever.getAlbumListAsStringArray(
+                                mRetriever.getSelectedArtistAlbums());
                     } else {
                         // user has not selected an artist yet
-                        itemListValues = musicRetriever.getArtistListAsStringArray();
+                        itemListValues = mRetriever.getArtistListAsStringArray();
                     }
                 } else {
                     // user has selected an album and is viewing it's song list
-                    itemListValues = musicRetriever.getSongListAsStringArray(
-                            musicRetriever.getSongListOfSelectedAlbumOfSelectedArtist());
+                    itemListValues = mRetriever.getSongListAsStringArray(
+                            mRetriever.getSongListOfSelectedAlbumOfSelectedArtist());
                 }
                 break;
             case 1:
-
-                if (musicRetriever.getAlbumStackSize() > 1) {
+                if (mRetriever.getAlbumStackSize() > 1) {
                     // user may have selected an album list
-                    itemListValues = musicRetriever.getSongListAsStringArray(
-                            musicRetriever.getSongListOfSelectedAlbumOfAlbumList());
+                    itemListValues = mRetriever.getSongListAsStringArray(
+                            mRetriever.getSongListOfSelectedAlbumOfAlbumList());
                 } else {
                     // no album has been selected from the album list
-                    itemListValues = musicRetriever.getAlbumListAsStringArray(musicRetriever.getAlbums());
+                    itemListValues = mRetriever.getAlbumListAsStringArray(mRetriever.getAlbums());
                 }
                 break;
             default:
-                itemListValues = musicRetriever.getSongListAsStringArray(musicRetriever.getSongs());
+                itemListValues = mRetriever.getSongListAsStringArray(mRetriever.getSongs());
                 break;
         }
 
         bundleData.putStringArray(currentListKey, itemListValues);
-        bundleData.putBoolean(playerStatusKey, mediaPlayer.isPlaying());
+        // todo here pass media player status
 
         musicListFragment.setArguments(bundleData);
 
@@ -319,20 +313,11 @@ public class MainActivity extends AppCompatActivity
                 replace(R.id.fragment_container, musicListFragment).commit();
     }
 
+    /**
+     * This method passes the media player status, current playback position
+     * and the song duration
+     */
     private void changeScreenToPlayer() {
-        Bundle bundleData = new Bundle();
-
-        String playerStatusKey = "isMusicPlaying",
-                currentSongPositionKey = "currentSongPosition",
-                songDurationKey = "currentSongDuration";
-
-        bundleData.putBoolean(playerStatusKey, mediaPlayer.isPlaying());
-        bundleData.putInt(currentSongPositionKey, mediaPlayer.getCurrentPosition());
-        bundleData.putInt(songDurationKey, musicRetriever.getCurrentSong() != null ?
-                (int) musicRetriever.getCurrentSong().getDuration() : -1);
-
-        musicPlayerFragment.setArguments(bundleData);
-
         musicListFragment.changeFABVisibility(false);
         tabLayout.setVisibility(View.GONE);
 
@@ -340,16 +325,35 @@ public class MainActivity extends AppCompatActivity
                 replace(R.id.fragment_container, musicPlayerFragment).commit();
     }
 
+    /**
+     * This main initializes objects
+     */
     private void initApp() {
+        prepareUI();
+
+        mRetriever = new MusicRetriever(getContentResolver());
+        PrepareMusicRetrieverTask prepRetrieverTask =
+                new PrepareMusicRetrieverTask(mRetriever, this);
+        prepRetrieverTask.execute();
+
         fragmentManager = getFragmentManager();
 
         musicListFragment = new MusicListFragment();
         musicPlayerFragment = new MusicPlayerFragment();
 
-        prepareUI();
+        mBroadcastReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Toast.makeText(getApplicationContext(), "Received " + intent.getAction() + " Intent",
+                        Toast.LENGTH_SHORT).show();
+            }
+        };
         changeScreenToList();
     }
 
+    /**
+     * This method prepares the UI elements
+     */
     private void prepareUI() {
         myToolbar = (Toolbar) findViewById(R.id.toolbar);
         tabLayout = (TabLayout) findViewById(R.id.music_list_tab_layout);
@@ -359,35 +363,34 @@ public class MainActivity extends AppCompatActivity
                 String[] newItems;
                 switch (tab.getPosition()) {
                     case 0:
-                        switch (musicRetriever.getArtistStackSize()) {
+                        switch (mRetriever.getArtistStackSize()) {
                             case 2:
-                                newItems = musicRetriever.getAlbumListAsStringArray(
-                                        musicRetriever.getSelectedArtistAlbums());
+                                newItems = mRetriever.getAlbumListAsStringArray(
+                                        mRetriever.getSelectedArtistAlbums());
                                 break;
                             case 3:
-                                newItems = musicRetriever.getSongListAsStringArray(
-                                        musicRetriever.getSongListOfSelectedAlbumOfSelectedArtist());
+                                newItems = mRetriever.getSongListAsStringArray(
+                                        mRetriever.getSongListOfSelectedAlbumOfSelectedArtist());
                                 break;
                             default:
-                                newItems = musicRetriever.getArtistListAsStringArray();
+                                newItems = mRetriever.getArtistListAsStringArray();
                                 break;
                         }
                         break;
                     case 1:
-                        switch (musicRetriever.getAlbumStackSize()) {
+                        switch (mRetriever.getAlbumStackSize()) {
                             case 2:
-                                newItems = musicRetriever.getSongListAsStringArray(
-                                        musicRetriever.getSongListOfSelectedAlbumOfAlbumList());
+                                newItems = mRetriever.getSongListAsStringArray(
+                                        mRetriever.getSongListOfSelectedAlbumOfAlbumList());
                                 break;
                             default:
-                                newItems = musicRetriever.getAlbumListAsStringArray(
-                                        musicRetriever.getAlbums());
+                                newItems = mRetriever.getAlbumListAsStringArray(
+                                        mRetriever.getAlbums());
                                 break;
                         }
                         break;
                     default:
-                        newItems = musicRetriever.getSongListAsStringArray(
-                                musicRetriever.getSongs());
+                        newItems = mRetriever.getSongListAsStringArray(mRetriever.getSongs());
                         break;
                 }
                 musicListFragment.changeContents(newItems);
@@ -404,38 +407,12 @@ public class MainActivity extends AppCompatActivity
         setSupportActionBar(myToolbar);
     }
 
+    /**
+     * Callback Method for when the music retriever has been prepared.
+     *
+     * Here we could initialize the list and populate it with values
+     */
     @Override
-    public void onBackPressed() {
-        if (musicListFragment.isVisible()) {
-            switch (tabLayout.getSelectedTabPosition()) {
-                case 0:
-                    switch (musicRetriever.getArtistStackSize()) {
-                        case 2:
-                            // 2 pops makes the stack have only artists
-                            musicRetriever.popArtistStack();
-                            musicListFragment.changeContents(
-                                    musicRetriever.getArtistListAsStringArray());
-                            break;
-                        case 3:
-                            // 1 pop make the stack have only artists and selected artist album
-                            musicRetriever.popArtistStack();
-                            musicListFragment.changeContents(
-                                    musicRetriever.getAlbumListAsStringArray(
-                                            musicRetriever.getSelectedArtistAlbums()));
-                            break;
-                    }
-                    break;
-                case 1:
-                    switch (musicRetriever.getAlbumStackSize()) {
-                        case 2:
-                            musicRetriever.popSongListFromAlbumStack();
-                            musicListFragment.changeContents(
-                                    musicRetriever.getAlbumListAsStringArray(
-                                            musicRetriever.getAlbums()));
-                            break;
-                    }
-                    break;
-            }
-        }
+    public void onMusicRetrieverPrepared() {
     }
 }

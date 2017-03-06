@@ -10,8 +10,6 @@ import android.provider.MediaStore;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Stack;
 
@@ -26,8 +24,9 @@ import n1njagangsta.boombox.Model.Song;
  */
 public class MusicRetriever {
     private ContentResolver contentResolver;
-    private ArrayList<Song> allSongs, currentPlaylist;
+    private ArrayList<Song> allSongs;
     private Stack<Object> artistsStack, albumsStack;
+    private ArrayList<Song> currentPlaylist;
     private int currentSongIndex;
 
     public MusicRetriever(ContentResolver newContentResolver) {
@@ -67,18 +66,21 @@ public class MusicRetriever {
                 durationColumn = cursor.getColumnIndex(MediaStore.Audio.Media.DURATION),
                 idColumn = cursor.getColumnIndex(MediaStore.Audio.Media._ID);
 
-        do{
-            Song newSong = new Song(
-                    cursor.getString(titleColumn),
-                    cursor.getString(artistColumn),
-                    cursor.getString(albumColumn),
-                    cursor.getLong(durationColumn)
-            );
-            long songId = cursor.getLong(idColumn);
+        long songId = cursor.getLong(idColumn);
 
-            newSong.setURI(ContentUris.withAppendedId(
-                            android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                            songId));
+        //here we instantiate all local songs
+        do{
+            String songTitle = cursor.getString(titleColumn),
+                    artistName = cursor.getString(artistColumn),
+                    album = cursor.getString(albumColumn);
+
+            int duration = cursor.getInt(durationColumn);
+            //this works for local songs, for URL use setSongUri which (hopefully) parses the url
+            Uri songUri = ContentUris.withAppendedId(
+                    android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                    songId);
+
+            Song newSong = new Song(songTitle, artistName, album, duration, songUri);
 
             allSongs.add(newSong);
         } while (cursor.moveToNext());
@@ -254,16 +256,19 @@ public class MusicRetriever {
         return artists;
     }
 
-    public Album getAlbumByName(String albumTitle){
-        Album foundAlbum = null;
-
+    /**
+     * Performs a binary search on the whole album list.
+     * BEWARE, the list may not be sorted by default.
+     *
+     * Returns the Album searched for or throws a NullPointerException due to the fact
+     * that there is no album found
+     */
+    public Album getAlbumByName(String albumTitle) throws NullPointerException{
         int foundAlbumIndex = Arrays.binarySearch(
                 getAlbumListAsStringArray(getAlbums()), albumTitle);
         if(foundAlbumIndex >= 0) {
-            foundAlbum = getAlbums().get(foundAlbumIndex);
-        }
-
-        return foundAlbum;
+            return getAlbums().get(foundAlbumIndex);
+        } else throw new NullPointerException("No album found by title:" + albumTitle);
     }
 
     public void setPlaylist(ArrayList<Song> newPlaylist){
@@ -274,19 +279,11 @@ public class MusicRetriever {
         return this.currentPlaylist;
     }
 
-    public int getPlaylistSize(){
-        return this.currentPlaylist.size();
-    }
-
     public int getCurrentSongIndex() {
         return currentSongIndex;
     }
 
-    public void setCurrentSongIndex(int newCurrentSongIndex) {
+    public void setCurrentSongIndex(int newCurrentSongIndex){
         this.currentSongIndex = newCurrentSongIndex;
-    }
-
-    public Song getCurrentSong(){
-        return currentPlaylist != null ? currentPlaylist.get(currentSongIndex) : null;
     }
 }
