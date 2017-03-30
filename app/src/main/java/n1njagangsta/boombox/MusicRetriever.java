@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Stack;
 
+import n1njagangsta.boombox.Exceptions.NoSongsException;
 import n1njagangsta.boombox.Model.Album;
 import n1njagangsta.boombox.Model.Artist;
 import n1njagangsta.boombox.Model.Song;
@@ -37,7 +38,7 @@ public class MusicRetriever {
     }
 
     // TODO Reimplement this method to not exit when a cursor is either null or empty
-    public void prepare(){
+    public void prepare() throws NoSongsException {
         Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
 
         // Songs Query
@@ -57,7 +58,7 @@ public class MusicRetriever {
 
         if(!cursor.moveToFirst()){
             System.err.println("Failed to get first item. No songs on device");
-            return;
+            throw new NoSongsException();
         }
 
         int artistColumn = cursor.getColumnIndex(MediaStore.Audio.AudioColumns.ARTIST),

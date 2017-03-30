@@ -2,10 +2,14 @@ package n1njagangsta.boombox.Activities;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
@@ -32,7 +36,8 @@ import n1njagangsta.boombox.Services.PlaybackService;
 public class MainActivity extends AppCompatActivity
         implements MusicListFragment.OnItemSelectedListener,
         MusicPlayerFragment.OnPlayerViewInteractionListener,
-        PrepareMusicRetrieverTask.MusicRetrieverPreparedListener{
+        MediaPlayerInteraction,
+        PrepareMusicRetrieverTask.MusicRetrieverPreparedListener {
 
     FragmentManager fragmentManager;
     TabLayout tabLayout;
@@ -41,6 +46,10 @@ public class MainActivity extends AppCompatActivity
     MusicPlayerFragment musicPlayerFragment;
     MusicRetriever mRetriever;
     BroadcastReceiver mBroadcastReceiver;
+
+    PlaybackService.ServiceBinder serviceBinder;
+    ServiceConnection serviceConnection;
+    boolean isServiceBound;
 
     //todo when headphones come out, pause playback
 
@@ -69,6 +78,7 @@ public class MainActivity extends AppCompatActivity
         }
 
         initApp();
+        startService(new Intent(this, PlaybackService.class));
     }
 
     @Override
@@ -159,7 +169,7 @@ public class MainActivity extends AppCompatActivity
                         musicListFragment.changeContents(
                                 mRetriever.getAlbumListAsStringArray(
                                         mRetriever.getSelectedArtistAlbums()));
-                        break;
+                        return;
                     case 2:
                         // user selected an album of the selected artist
                         mRetriever.pushSongListToArtistStack(
@@ -169,9 +179,10 @@ public class MainActivity extends AppCompatActivity
                         musicListFragment.changeContents(
                                 mRetriever.getSongListAsStringArray(
                                         mRetriever.getSongListOfSelectedAlbumOfSelectedArtist()));
-                        break;
+                        return;
                     case 3:
                         // user selected a song from previously selected album
+                        mRetriever.setCurrentSongIndex(listItemIndex);
                         newSongList = mRetriever.getSongListOfSelectedAlbumOfSelectedArtist();
                         break;
                 }
@@ -187,8 +198,9 @@ public class MainActivity extends AppCompatActivity
                         musicListFragment.changeContents(
                                 mRetriever.getSongListAsStringArray(
                                         mRetriever.getSongListOfSelectedAlbumOfAlbumList()));
-                        break;
+                        return;
                     case 2:
+                        mRetriever.setCurrentSongIndex(listItemIndex);
                         newSongList = mRetriever.getSongListOfSelectedAlbumOfAlbumList();
                         break;
                 }
@@ -196,12 +208,13 @@ public class MainActivity extends AppCompatActivity
 
             // songs tab
             default:
+                mRetriever.setCurrentSongIndex(listItemIndex);
                 newSongList = mRetriever.getSongs();
                 break;
         }
 
-        mRetriever.setCurrentSongIndex(listItemIndex);
-        if (currentPlaylist == null || !currentPlaylist.equals(newSongList)){
+        //TODO change this so that it only applies when a song is about to be played
+        if (currentPlaylist == null || !currentPlaylist.equals(newSongList)) {
             mRetriever.setPlaylist(newSongList);
         } else newSongList = null;
 
@@ -210,21 +223,29 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onSkipToPreviousClick() {
-        Intent skipToPreviousIntent = new Intent(PlaybackService.ACTION_PLAY_PREVIOUS_SONG);
-        startService(skipToPreviousIntent);
+        if (isServiceBound) {
+            serviceBinder.skipToPreviousSong();
+        } else {
+            System.err.println("Service not bound");
+        }
     }
 
     @Override
     public void onSkipToNextClick() {
-        Intent skipToNextIntent = new Intent(PlaybackService.ACTION_PLAY_NEXT_SONG);
-        startService(skipToNextIntent);
+        if (isServiceBound) {
+            serviceBinder.skipToNextSong();
+        } else {
+            System.err.println("Service not bound");
+        }
     }
 
     @Override
     public void onSeek(int seekValue) {
-        Intent seekIntent = new Intent(PlaybackService.ACTION_SEEK_TO);
-        seekIntent.putExtra(String.valueOf(R.string.Intent_Seek_To_Integer_Value),seekValue);
-        startService(seekIntent);
+        if (isServiceBound) {
+            serviceBinder.skipTo(seekValue);
+        } else {
+            System.err.println("Service not bound");
+        }
     }
 
     @Override
@@ -240,23 +261,25 @@ public class MainActivity extends AppCompatActivity
      * if so, just send the index at which new song is at.
      */
     private void onSongSelect(ArrayList<Song> newSongList, int newSongIndex) {
+        if (isServiceBound) {
+            // prepare new playback content
+            serviceBinder.preparePlaybackMedia(newSongList, newSongIndex);
+            // start playback if paused
+            serviceBinder.switchPlaybackStatus();
 
-        Intent playbackIntent = new Intent(PlaybackService.ACTION_START_PLAYBACK);
+            myToolbar.setTitle(mRetriever.getPlaylist().get(newSongIndex).getSongTitle());
+            myToolbar.setSubtitle(mRetriever.getPlaylist().get(newSongIndex).getArtistName());
 
-        if (newSongList != null) {
-            playbackIntent.putParcelableArrayListExtra(String.valueOf(R.string.Intent_New_Playlist_Key), newSongList);
-        }
-        playbackIntent.putExtra(String.valueOf(R.string.Intent_New_Song_Index_Key), newSongIndex);
-
-        startService(playbackIntent);
-        myToolbar.setTitle(mRetriever.getPlaylist().get(newSongIndex).getSongTitle());
-        myToolbar.setSubtitle(mRetriever.getPlaylist().get(newSongIndex).getArtistName());
-
-        if (musicListFragment.isVisible()) {
-            musicListFragment.changeFABImage(true);
+            if (musicListFragment.isVisible()) {
+                musicListFragment.changeFABImage(true);
+            } else {
+                //this is implicit to when skipping songs as well
+                musicPlayerFragment.changePlaybackButtonImage(true);
+            }
         } else {
-            //this is implicit to when skipping songs as well
-            musicPlayerFragment.changePlaybackButtonImage(true);
+            bindService(new Intent(this, PlaybackService.class),
+                    serviceConnection, BIND_ABOVE_CLIENT);
+            onSongSelect(newSongList, newSongIndex);
         }
     }
 
@@ -331,15 +354,24 @@ public class MainActivity extends AppCompatActivity
     private void initApp() {
         prepareUI();
 
+        serviceConnection = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {
+                serviceBinder = (PlaybackService.ServiceBinder) service;
+                isServiceBound = true;
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+                serviceBinder = null;
+                isServiceBound = false;
+            }
+        };
+
         mRetriever = new MusicRetriever(getContentResolver());
         PrepareMusicRetrieverTask prepRetrieverTask =
-                new PrepareMusicRetrieverTask(mRetriever, this);
+                new PrepareMusicRetrieverTask(mRetriever, this, this);
         prepRetrieverTask.execute();
-
-        fragmentManager = getFragmentManager();
-
-        musicListFragment = new MusicListFragment();
-        musicPlayerFragment = new MusicPlayerFragment();
 
         mBroadcastReceiver = new BroadcastReceiver() {
             @Override
@@ -348,7 +380,6 @@ public class MainActivity extends AppCompatActivity
                         Toast.LENGTH_SHORT).show();
             }
         };
-        changeScreenToList();
     }
 
     /**
@@ -405,14 +436,31 @@ public class MainActivity extends AppCompatActivity
             }
         });
         setSupportActionBar(myToolbar);
+
+        fragmentManager = getFragmentManager();
+
+        musicListFragment = new MusicListFragment();
+        musicPlayerFragment = new MusicPlayerFragment();
     }
 
     /**
      * Callback Method for when the music retriever has been prepared.
-     *
+     * <p>
      * Here we could initialize the list and populate it with values
      */
     @Override
     public void onMusicRetrieverPrepared() {
+        changeScreenToList();
+    }
+
+    @Override
+    public void onPlaybackClick() {
+        //todo start or pause playback
+    }
+
+    @Override
+    public boolean isMusicPlaying() {
+        //todo just return if media is playing from the service
+        return false;
     }
 }

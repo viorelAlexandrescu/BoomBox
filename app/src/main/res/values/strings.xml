@@ -13,4 +13,8 @@
     <string name="Intent_New_Playlist_Key">New Playlist</string>
     <string name="Intent_New_Song_Index_Key">New Song Index</string>
     <string name="Intent_Seek_To_Integer_Value">Seek To Value</string>
+
+    <string name="Initial_App_No_Songs_Dialog_Title">No Songs On Local Storage</string>
+    <string name="Initial_App_No_Songs_Dialog_Message">There are no songs on your device,
+        but you may connect to your streaming server</string>
 </resources>

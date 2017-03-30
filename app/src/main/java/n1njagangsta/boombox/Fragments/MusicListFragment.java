@@ -79,7 +79,6 @@ public class MusicListFragment extends Fragment implements AdapterView.OnItemCli
     public void onStart() {
         super.onStart();
         elementsList.setAdapter(stringArrayAdapter);
-        changeFABImage(getArguments().getBoolean("isMusicPlaying"));
     }
 
     @Override

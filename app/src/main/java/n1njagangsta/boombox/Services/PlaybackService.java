@@ -1,5 +1,7 @@
 package n1njagangsta.boombox.Services;
 
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -7,13 +9,16 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Binder;
 import android.os.IBinder;
+import android.os.Parcelable;
 import android.os.PowerManager;
 import android.support.annotation.Nullable;
 import android.util.Log;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Random;
 
+import n1njagangsta.boombox.Activities.MainActivity;
 import n1njagangsta.boombox.Model.MediaPlayerInteraction;
 import n1njagangsta.boombox.Model.Song;
 import n1njagangsta.boombox.R;
@@ -34,37 +39,78 @@ public class PlaybackService extends Service
     AudioManager.OnAudioFocusChangeListener mAfChangeListener;
     int currentSongIndex;
     ArrayList<Song> currentPlaylist;
-//    boolean isShuffling = false;
-
-    private static final String DEFAULT_ACTION = "n1njagangsta.boombox.action.";
-    public static final String ACTION_START_PLAYBACK = DEFAULT_ACTION + "START_PLAYBACK";
-    public static final String ACTION_PLAY = DEFAULT_ACTION + "PLAY";
-    public static final String ACTION_PAUSE = DEFAULT_ACTION + "PAUSE";
-    public static final String ACTION_PLAY_PREVIOUS_SONG = DEFAULT_ACTION + "SKIP_PREV";
-    public static final String ACTION_PLAY_NEXT_SONG = DEFAULT_ACTION + "SKIP_NEXT";
-    public static final String ACTION_SEEK_TO = DEFAULT_ACTION + "SEEK_TO_POSITION";
+    boolean isShuffling = false;
+    //
+//    private static final String DEFAULT_ACTION = "n1njagangsta.boombox.action.";
+//    public static final String ACTION_START_PLAYBACK = DEFAULT_ACTION + "START_PLAYBACK";
+//    public static final String ACTION_PLAY = DEFAULT_ACTION + "PLAY";
+//    public static final String ACTION_PAUSE = DEFAULT_ACTION + "PAUSE";
+//    public static final String ACTION_PLAY_PREVIOUS_SONG = DEFAULT_ACTION + "SKIP_PREV";
+//    public static final String ACTION_PLAY_NEXT_SONG = DEFAULT_ACTION + "SKIP_NEXT";
+//    public static final String ACTION_SEEK_TO = DEFAULT_ACTION + "SEEK_TO_POSITION";
     static final String TAG = "BoomBox Music Service";
     static final int NOTIFY_ID = 2014;
+
+    ServiceBinder serviceBinder = new ServiceBinder();
+
+    public class ServiceBinder extends Binder {
+        public void switchPlaybackStatus() {
+            changePlaybackStatus();
+        }
+
+        public void skipToPreviousSong() {
+            currentSongIndex--;
+            if (currentSongIndex < 0)
+                currentSongIndex = currentPlaylist.size() - 1;
+            play(currentPlaylist.get(currentSongIndex));
+        }
+
+        public void skipToNextSong() {
+            currentSongIndex++;
+            if (currentSongIndex >= currentPlaylist.size() - 1)
+                currentSongIndex = 0;
+            play(currentPlaylist.get(currentSongIndex));
+        }
+
+        public void preparePlaybackMedia(ArrayList<Song> newSongList, int newSongIndex) {
+            if (newSongList != null) {
+                currentPlaylist = newSongList;
+            }
+            currentSongIndex = newSongIndex;
+        }
+
+        public void skipTo(int newValue) {
+            mPlayer.pause();
+            mPlayer.seekTo(newValue);
+        }
+
+        public void setShuffle(boolean newShufflingValue) {
+            isShuffling = newShufflingValue;
+        }
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
 
         mAudioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
-        mPlayer = new MediaPlayer();
         mAfChangeListener = this;
 
         initializeMediaPlayer();
     }
 
+    /**
+     * Callback for requesting audio focus, or when an event occurs and focus changes
+     *
+     * When focus is gained indefinitely after a request, start playback of the current song
+     * @param focusState
+     */
     @Override
     public void onAudioFocusChange(int focusState) {
         //Invoked when the audio focus of the system is updated.
         switch (focusState) {
             case AudioManager.AUDIOFOCUS_GAIN:
-                // resume playback
-                if (mPlayer == null) initializeMediaPlayer();
-                else changePlaybackStatus();
+                play(currentPlaylist.get(currentSongIndex));
                 break;
             case AudioManager.AUDIOFOCUS_LOSS:
                 // Lost focus for an unbounded amount of time: stop playback and release media player
@@ -86,42 +132,47 @@ public class PlaybackService extends Service
         }
     }
 
+    /**
+     * Method callback for when a client asks to bind to the music service.
+     * @param intent
+     * @return
+     */
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+        Notification notification = new Notification.Builder(this)
+                .setContentTitle("Test")
+                .setContentText("Service Test")
+                .setSmallIcon(R.drawable.ic_play_arrow_white_48dp)
+                .setContentIntent(pendingIntent)
+                .setTicker("PLM")
+                .build();
+
+        startForeground(2014, notification);
+
+        return this.serviceBinder;
     }
 
+    /**
+     * Method callback for when starting a service
+     * @param intent
+     * @param flags
+     * @param startId
+     * @return
+     */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        switch (intent.getAction()) {
-            case ACTION_START_PLAYBACK:
-                if(intent.getParcelableExtra(String.valueOf(R.string.Intent_New_Playlist_Key)) != null){
-                    currentPlaylist = intent.getParcelableExtra(String.valueOf(R.string.Intent_New_Playlist_Key));
-                }
-                playNewSong(currentPlaylist.get(intent.getIntExtra(String.valueOf(R.string.Intent_New_Song_Index_Key),0)));
-                break;
-            case ACTION_PLAY:
-                changePlaybackStatus();
-                break;
-            case ACTION_PAUSE:
-                changePlaybackStatus();
-                break;
-            case ACTION_PLAY_PREVIOUS_SONG:
-                playPreviousSong();
-                break;
-            case ACTION_PLAY_NEXT_SONG:
-                playNextSong();
-                break;
-            case ACTION_SEEK_TO:
-                mPlayer.pause();
-                mPlayer.seekTo(intent.getIntExtra(String.valueOf(R.string.Intent_Seek_To_Integer_Value),0));
-                break;
-        }
+
         // If we get killed, after returning from here, restart
         return START_STICKY;
     }
 
+    /**
+     * Method callback for when stopping the service
+     */
     @Override
     public void onDestroy() {
         currentPlaylist = null;
@@ -131,10 +182,13 @@ public class PlaybackService extends Service
         if (mPlayer.isPlaying()) {
             mPlayer.stop();
         }
+        mPlayer.reset();
         mPlayer.release();
-        abandonAudioFocus();
+        mPlayer = null;
 
+        abandonAudioFocus();
         stopForeground(true);
+
         Toast.makeText(getApplicationContext(), "Service Destroyed", Toast.LENGTH_SHORT).show();
     }
 
@@ -150,22 +204,32 @@ public class PlaybackService extends Service
         return false;
     }
 
+    /**
+     * Callback after seeking to a certain point.
+     * @param mediaPlayer
+     */
     @Override
-    public void onSeekComplete(MediaPlayer mPlayer) {
-        changePlaybackStatus();
+    public void onSeekComplete(MediaPlayer mediaPlayer) {
+        mPlayer.start();
     }
 
+    /**
+     * Callback after a song playback has ended
+     * @param mediaPlayer
+     */
     @Override
-    public void onCompletion(MediaPlayer mPlayer) {
-//        if(isShuffling){
-//            Random randomValue = new Random();
-//            currentSongIndex = randomValue.nextInt(currentPlaylist.size());
-//        }
-//        else{
-        currentSongIndex++;
-        if (currentSongIndex >= currentPlaylist.size())
-            currentSongIndex = 0;
-        playNewSong(currentPlaylist.get(currentSongIndex));
+    public void onCompletion(MediaPlayer mediaPlayer) {
+        if (isShuffling) {
+            Random randomValue = new Random();
+            currentSongIndex = randomValue.nextInt(currentPlaylist.size());
+        } else {
+            currentSongIndex++;
+            if (currentSongIndex >= currentPlaylist.size() - 1) {
+                mPlayer.stop();
+                return;
+            }
+        }
+        requestAudioFocus();
     }
 
     @Override
@@ -186,60 +250,46 @@ public class PlaybackService extends Service
         return isErrorHandled;
     }
 
+    /**
+     * Callback after a song has been prepared for playback
+     * @param mPlayer
+     */
     @Override
     public void onPrepared(MediaPlayer mPlayer) {
         changePlaybackStatus();
     }
 
-    private boolean requestAudioFocus() {
-        boolean isFocusGranted = false;
-
-        mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        int result = mAudioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
-        if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-            //Focus gained
-            isFocusGranted = true;
-            Toast.makeText(this, "Audio Focus Gained", Toast.LENGTH_SHORT).show();
-        }
-        //Could not gain focus
-        return isFocusGranted;
+    /**
+     * Method for requesting audio focus
+     * @return int value for AudioManager class constants
+     */
+    private int requestAudioFocus() {
+        return mAudioManager.requestAudioFocus(
+                this,
+                AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN
+        );
     }
 
     private boolean abandonAudioFocus() {
         return AudioManager.AUDIOFOCUS_REQUEST_GRANTED == mAudioManager.abandonAudioFocus(this);
     }
 
-    void playPreviousSong() {
-        currentSongIndex--;
-        if (currentSongIndex < 0)
-            currentSongIndex = currentPlaylist.size() - 1;
-        playNewSong(currentPlaylist.get(currentSongIndex));
-    }
-
-    void playNewSong(Song newSong) {
+    void play(Song newSong) {
         if (mPlayer.isPlaying()) {
             mPlayer.stop();
         }
         mPlayer.reset();
-
-//        Song currentSong = currentPlaylist.get(currentSongIndex);
         try {
-            mPlayer.setDataSource(getApplicationContext(), newSong.getUri());
+            mPlayer.setDataSource(this, newSong.getUri());
+            mPlayer.prepareAsync();
         } catch (Exception e) {
             Log.e("MUSIC SERVICE", "Error setting data source", e);
         }
-        mPlayer.prepareAsync();
     }
 
-    void playNextSong(){
-        currentSongIndex++;
-        if (currentSongIndex > currentPlaylist.size() - 1)
-            currentSongIndex = 0;
-        playNewSong(currentPlaylist.get(currentSongIndex));
-    }
-
-    void changePlaybackStatus(){
-        if(mPlayer.isPlaying()){
+    void changePlaybackStatus() {
+        if (mPlayer.isPlaying()) {
             mPlayer.pause();
         } else {
             mPlayer.start();
@@ -247,6 +297,8 @@ public class PlaybackService extends Service
     }
 
     void initializeMediaPlayer() {
+        mPlayer = new MediaPlayer();
+
         mPlayer.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK);
         mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
 
@@ -257,25 +309,5 @@ public class PlaybackService extends Service
         mPlayer.setOnBufferingUpdateListener(this);
         mPlayer.setOnSeekCompleteListener(this);
         mPlayer.setOnInfoListener(this);
-    }
-
-    public void setPlaylist(ArrayList<Song> newPlaylist) {
-        this.currentPlaylist = newPlaylist;
-    }
-
-    public ArrayList<Song> getPlaylist() {
-        return this.currentPlaylist;
-    }
-
-    public int getPlaylistSize() {
-        return this.currentPlaylist.size();
-    }
-
-    public int getCurrentSongIndex() {
-        return currentSongIndex;
-    }
-
-    public void setCurrentSongIndex(int newCurrentSongIndex) {
-        this.currentSongIndex = newCurrentSongIndex;
     }
 }
